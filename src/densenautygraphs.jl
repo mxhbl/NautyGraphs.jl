@@ -159,9 +159,9 @@ Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
 
 function Graphs.adjacency_matrix(g::AbstractDenseNautyGraph, T::DataType=Int; dir::Symbol=:out)
     n = nv(g)
-    k = ne(g)
 
     es = _directed_edges(g)
+    k = length(es)
     is, js, vals = zeros(T, k), zeros(T, k), ones(T, k)
     for (i, e) in enumerate(es)
         is[i] = e.src
