@@ -61,7 +61,7 @@ end
 #     # ... 
 # end
 
-function nauty(g::AbstractDenseNautyGraph, canonical_form=false, ::Type{T}=Int; ignore_vertex_labels=false, kwargs...) where {T} #TODO: allow nautyoptions to be overwritten
+function nauty(g::DenseNautyGraph, canonical_form=false, ::Type{T}=Int; ignore_vertex_labels=false, kwargs...) where {T} #TODO: allow nautyoptions to be overwritten
     n, m = g.n_vertices, g.n_words
 
     options = NautyOptions()
@@ -107,7 +107,7 @@ function _fill_hash!(g::AbstractNautyGraph)
     return hashval, n
 end
 
-function canonize!(g::AbstractDenseNautyGraph)
+function canonize!(g::AbstractNautyGraph)
     n, canong, canon_perm = nauty(g, true)
     topology_hash = hash(canong)
 
@@ -117,3 +117,17 @@ function canonize!(g::AbstractDenseNautyGraph)
 
     return canon_perm, n
 end
+
+function Base.hash(g::AbstractNautyGraph)
+    hashval = g.hashval
+    if !isnothing(hashval)
+        return hashval
+    end
+
+    # TODO: error checking and so on
+    _fill_hash!(g)
+    return g.hashval
+end
+
+is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph) = hash(g) == hash(h)
+≃(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)

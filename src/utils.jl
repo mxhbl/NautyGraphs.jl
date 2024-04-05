@@ -4,6 +4,15 @@ const Cbool = Cint
 const HashType = UInt
 const WORDSIZE = @ccall nauty_lib.wordsize()::Cint
 
+
+function initialize_vertexlabels(n::Integer, vertex_labels::Union{Vector{<:Integer},Nothing})
+    if isnothing(vertex_labels)
+        return zeros(Cint, n)
+    else
+        return convert(Vector{Cint}, vertex_labels)
+    end
+end
+
 function adjmatrix_to_graphset(A::AbstractMatrix{T}) where {T<:Integer}
     n, _n = size(A)
     @assert n == _n
@@ -90,7 +99,6 @@ end
 
 
 @inline function has_bit(word::WordType, i::Integer)
-    @assert 0 < 1 <= WORDSIZE
     mask = one(WordType) << (WORDSIZE - i)
     return (mask & word) != zero(WordType)
 end

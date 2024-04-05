@@ -6,10 +6,11 @@ include("nauty.jl")
 
 export
     AbstractNautyGraph,
-    AbstractDenseNautyGraph,
-    DenseNautyGraph,
-    DirectedDenseNautyGraph,
-    blockdiag,
+    NautyGraph,
+    NautyDiGraph,
+    labels,
     nauty,
-    canonize!
+    canonize!,
+    is_isomorphic,
+    ≃
 end
