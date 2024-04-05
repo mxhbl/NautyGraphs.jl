@@ -211,6 +211,7 @@ function Graphs.add_edge!(g::DenseNautyGraph{false}, e::Edge)
     end
     return edge_added
 end
+Graphs.add_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.add_edge!(g, Graphs.Edge{Cint}(i, j))
 function Graphs.rem_edge!(g::DenseNautyGraph{true}, e::Edge)
     edge_removed = modify_edge!(g, e, false)
     if edge_removed
@@ -230,6 +231,8 @@ function Graphs.rem_edge!(g::DenseNautyGraph{false}, e::Edge)
     end
     return edge_removed
 end
+Graphs.rem_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.rem_edge!(g, Graphs.Edge{Cint}(i, j))
+
 function Graphs.add_vertex!(g::DenseNautyGraph, label::Union{<:Integer,Nothing}=nothing)
     if isnothing(label)
         labelled = !all(iszero, g.labels)
