@@ -21,7 +21,7 @@ mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
         for word in graphset
             n_edges += count_bits(word)
         end
-        if directed
+        if !directed
             n_edges ÷= 2
         end
         return new{directed}(graphset, n_vertices, n_edges, n_words, labels, nothing)
@@ -125,7 +125,7 @@ end
 
 Graphs.is_directed(::Type{<:DenseNautyGraph{D}}) where {D} = D
 Graphs.edgetype(::AbstractNautyGraph) = Edge{Cint}
-Base.eltype(::AbstractNautyGraph) = WordType
+Base.eltype(::AbstractNautyGraph) = Cint
 Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
 
 function Graphs.adjacency_matrix(g::DenseNautyGraph, T::DataType=Int; dir::Symbol=:out)
@@ -309,7 +309,7 @@ function Graphs.rem_vertices!(g::DenseNautyGraph, inds::AbstractVector{<:Integer
     for word in g.graphset
         n_edges += count_bits(word)
     end
-    if is_directed(g)
+    if !is_directed(g)
         n_edges ÷= 2
     end
     g.n_edges = n_edges
