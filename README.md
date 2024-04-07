@@ -1,5 +1,5 @@
 # NautyGraphs.jl
-NautyGraphs.jl is a simple Julia interface to _nauty_ that allows for efficient isomorphism checking and canonical labeling of vertex-labeled graphs.
+NautyGraphs.jl is a simple Julia interface to _nauty_ that allows for efficient isomorphism checking, canonical labeling, and hashing of vertex-labeled graphs.
 ## Installation
 To install NautyGraphs.jl from the Julia REPL, enter `]` to enter Pkg mode, and then run
 ```
@@ -29,7 +29,7 @@ false
 julia> g ≃ h
 true
 ```
-Isomorphism are computed by comparing the hashes of the graphs' canonical labels.
+Isomorphisms are computed by comparing graph hashes.
 ```
 julia> hash(g)
 0x3127d9b726f2c846
