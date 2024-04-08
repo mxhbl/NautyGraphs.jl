@@ -30,6 +30,9 @@ mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
         end
         return new{directed}(graphset, n_vertices, n_edges, n_words, labels, nothing)
     end
+    function DenseNautyGraph{D}(graphset, n_vertices, n_edges, n_words, labels, hashval) where {D}
+        return new{D}(graphset, n_vertices, n_edges, n_words, labels, hashval)
+    end
 end
 
 const NautyGraph = DenseNautyGraph{false}
@@ -239,8 +242,8 @@ Graphs.rem_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.rem_edg
 
 function Graphs.add_vertex!(g::DenseNautyGraph, label::Union{<:Integer,Nothing}=nothing)
     if isnothing(label)
-        labelled = !all(iszero, g.labels)
-        labelled && error("Cannot add an unlabeled vertex to a labeled nautygraph. Use `add_vertex!(g, label)` to add a labeled vertex.")
+        labeled = !all(iszero, g.labels)
+        labeled && error("Cannot add an unlabeled vertex to a labeled nautygraph. Use `add_vertex!(g, label)` to add a labeled vertex.")
     end
 
     n = nv(g)
