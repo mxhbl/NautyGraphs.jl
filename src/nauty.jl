@@ -61,7 +61,7 @@ end
 #     # ... 
 # end
 
-function nauty(g::DenseNautyGraph, canonical_form=false, ::Type{T}=Int; ignore_vertex_labels=false, kwargs...) where {T} #TODO: allow nautyoptions to be overwritten
+function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) where {T} #TODO: allow nautyoptions to be overwritten
     n, m = g.n_vertices, g.n_words
 
     options = NautyOptions()
@@ -98,6 +98,7 @@ function nauty(g::DenseNautyGraph, canonical_form=false, ::Type{T}=Int; ignore_v
     end
     return grpsize, canong, canon_perm
 end
+nauty(g::DenseNautyGraph, canonical_form=true; kwargs...) = nauty(Int, g, canonical_form; kwargs...)
 
 function _fill_hash!(g::AbstractNautyGraph)
     n, canong, canon_perm = nauty(g, true)

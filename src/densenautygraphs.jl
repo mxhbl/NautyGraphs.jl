@@ -2,7 +2,7 @@ using Graphs
 using SparseArrays
 
 abstract type AbstractNautyGraph <: AbstractGraph{Cint} end
-# TODO: abstract type AbstractSparseNautyGraph{T} <: AbstractNautyGraph{T} end
+# TODO: abstract type AbstractSparseNautyGraph <: AbstractNautyGraph end
 
 mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
     graphset::Vector{WordType}
@@ -14,7 +14,11 @@ mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
 
     function DenseNautyGraph(graphset, labels, directed::Bool)
         n_vertices = length(labels)
-        n_words = length(graphset) ÷ n_vertices
+        if n_vertices > 0
+            n_words = length(graphset) ÷ n_vertices
+        else
+            n_words = 1
+        end
 
         @assert length(graphset) == n_words * n_vertices
         n_edges = 0
@@ -236,7 +240,7 @@ Graphs.rem_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.rem_edg
 function Graphs.add_vertex!(g::DenseNautyGraph, label::Union{<:Integer,Nothing}=nothing)
     if isnothing(label)
         labelled = !all(iszero, g.labels)
-        labelled && error("Cannot add an unlabeled vertex to a labeled nautygraph.")
+        labelled && error("Cannot add an unlabeled vertex to a labeled nautygraph. Use `add_vertex!(g, label)` to add a labeled vertex.")
     end
 
     n = nv(g)
@@ -254,12 +258,18 @@ function Graphs.add_vertex!(g::DenseNautyGraph, label::Union{<:Integer,Nothing}=
     if isnothing(label)
         push!(g.labels, zero(Cint))
     else
-        push!(g.labels, convert(T, label))
+        push!(g.labels, convert(Cint, label))
     end
 
     g.hashval = nothing
     g.n_vertices += 1
     return true
+end
+function Graphs.add_vertices!(g::AbstractNautyGraph, labels::Union{AbstractVector{<:Integer},Nothing}=nothing)
+    for l in labels
+        add_vertex!(g, l)
+    end
+    return length(labels)
 end
 function Graphs.rem_vertices!(g::DenseNautyGraph, inds::AbstractVector{<:Integer})
     n = nv(g)
