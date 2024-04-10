@@ -30,7 +30,7 @@ false
 julia> g ≃ h
 true
 ```
-If you want to reorder a graph's vertices into canonical order, use `canonize!(g)`. This will return the permutation needed to canonize `g`, as well as the size of the automorphism group:
+If you want to reorder a graph's vertices into canonical order, use `canonize!(g)`. This will modify `g` to be in canonical order and return the permutation needed to canonize `g`, as well as the size of the automorphism group:
 ```
 julia> canonize!(g)
 ([1, 3, 4, 2], 2)
