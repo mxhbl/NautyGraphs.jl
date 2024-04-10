@@ -3,7 +3,7 @@ NautyGraphs.jl is a simple Julia interface to [_nauty_](https://pallini.di.uniro
 ## Installation
 To install NautyGraphs.jl from the Julia REPL, enter `]` to enter Pkg mode, and then run
 ```
-pkg> add https://github.com/maxhbl/NautyGraphs.jl
+pkg> add https://github.com/mxhbl/NautyGraphs.jl
 ```
 ## Basic Usage
 NautyGraphs.jl defines the `NautyGraph` or `NautyDiGraph` graph formats, which can be constructed through a number of different ways:
