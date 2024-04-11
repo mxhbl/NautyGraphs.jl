@@ -13,13 +13,13 @@ function initialize_vertexlabels(n::Integer, vertex_labels::Union{Vector{<:Integ
     end
 end
 
-function adjmatrix_to_graphset(A::AbstractMatrix{T}) where {T<:Integer}
+function adjmatrix_to_graphset(A::AbstractMatrix{<:Integer})
     n, _n = size(A)
     @assert n == _n
 
-    m = ceil(T, n / WORDSIZE)
+    m = ceil(Cint, n / WORDSIZE)
 
-    G = zeros(T, n, m * WORDSIZE)
+    G = zeros(Cint, n, m * WORDSIZE)
     G[:, 1:n] .= A
     # Reshape the padded adjacency matrix from 
     # (a b c)
