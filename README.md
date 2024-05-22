@@ -6,7 +6,7 @@ To install NautyGraphs.jl from the Julia REPL, enter `]` to enter Pkg mode, and 
 pkg> add https://github.com/mxhbl/NautyGraphs.jl
 ```
 ## Basic Usage
-NautyGraphs.jl defines the `NautyGraph` or `NautyDiGraph` graph formats, which can be constructed through a number of different ways:
+NautyGraphs.jl defines the `NautyGraph` or `NautyDiGraph` graph formats, which can be constructed in a number of different ways:
 ```
 using Graphs
 using NautyGraphs
