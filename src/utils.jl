@@ -1,10 +1,3 @@
-const nauty_lib = joinpath(@__DIR__, "..", "bin", "densenauty.so")
-const WordType = Cuint # TODO adaptive
-const Cbool = Cint
-const HashType = UInt
-const WORDSIZE = @ccall nauty_lib.wordsize()::Cint
-
-
 function initialize_vertexlabels(n::Integer, vertex_labels::Union{Vector{<:Integer},Nothing})
     if isnothing(vertex_labels)
         return zeros(Cint, n)
