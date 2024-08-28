@@ -6,9 +6,13 @@ const Cbool = Cint
 const HashType = UInt
 const WORDSIZE = @ccall nauty_lib.wordsize()::Cint
 
-include("utils.jl")
 include("densenautygraphs.jl")
+include("utils.jl")
+include("bitutils.jl")
 include("nauty.jl")
+
+const NautyGraph = DenseNautyGraph{false}
+const NautyDiGraph = DenseNautyGraph{true}
 
 export
     AbstractNautyGraph,
