@@ -61,13 +61,13 @@ end
 #     # ... 
 # end
 
-function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) where {T} #TODO: allow nautyoptions to be overwritten
+function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) where {T} # TODO: allow nautyoptions to be overwritten
     n, m = g.n_vertices, g.n_words
 
-    options = NautyOptions()
+    options = NautyOptions() # TODO: allocate default options outside and make sure they do not interfere with multithreading
     options.getcanon = canonical_form
     options.digraph = is_directed(g)
-    options.defaultptn = all(iszero, g.labels) || ignore_vertex_labels #TODO: check more carefully if lab/ptn is valid
+    options.defaultptn = all(iszero, g.labels) || ignore_vertex_labels # TODO: check more carefully if lab/ptn is valid
     lab, ptn = _vertexlabels_to_labptn(g.labels)
 
     stats = NautyStatistics()
