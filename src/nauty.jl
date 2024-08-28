@@ -76,7 +76,7 @@ function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex
     h = zero(g.graphset)
 
     @ccall nauty_lib.densenauty_wrap(
-        g.graphset::Ref{Cuint},
+        g.graphset::Ref{WordType},
         lab::Ref{Cint},
         ptn::Ref{Cint},
         orbits::Ref{Cint},
@@ -84,9 +84,15 @@ function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex
         Ref(stats)::Ref{NautyStatistics},
         m::Cint,
         n::Cint,
-        h::Ref{Cuint})::Cvoid
+        h::Ref{WordType})::Cvoid
 
-    grpsize = T(stats.grpsize1 * 10^stats.grpsize2)
+    if stats.grpsize1 * 10^stats.grpsize2 < typemax(T)
+        grpsize = T(stats.grpsize1 * 10^stats.grpsize2)
+    else
+        # TODO handle this better
+        @warn "automorphism group size overflow"
+        grpsize = zero(T)
+    end
     # autmorph = AutomorphismGroup{T}(grpsize, orbits, stats.numgenerators) # TODO: summarize useful automorphism group info
 
     if canonical_form
