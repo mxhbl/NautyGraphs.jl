@@ -4,6 +4,7 @@ using Graphs
 using NautyGraphs
 
 
-@testset "nauty" begin
+@testset "NautyGraphs" begin
     include("modify.jl")
+    include("nauty.jl")
 end
