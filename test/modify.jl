@@ -44,6 +44,8 @@ using Random, Graphs, LinearAlgebra
     for (g, ng, rv) in zip(gs, ngs, rvs)
         g, ng = copy(g), copy(ng)
 
+        add_vertices!(g, 500)
+        add_vertices!(ng, 500)
         add_edge!(g, 1, 2)
         add_edge!(ng, 1, 2)
         @test adjacency_matrix(g) == adjacency_matrix(ng)
