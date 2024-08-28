@@ -1,8 +1,8 @@
 using Downloads
 
-const NAUTY_VERSION = "2_8_8"
+const NAUTY_VERSION = "2_8_9"
 const NAUTY_URL = "https://pallini.di.uniroma1.it/nauty$NAUTY_VERSION.tar.gz"
-const WORDSIZE = 32
+const WORDSIZE = 64
 
 tarball = Downloads.download(NAUTY_URL)
 run(`tar xvzf $tarball -C $(@__DIR__)`)

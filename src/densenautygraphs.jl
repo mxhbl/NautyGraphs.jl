@@ -1,5 +1,5 @@
 using Graphs
-using SparseArrays
+using SparseArrays, LinearAlgebra
 
 abstract type AbstractNautyGraph <: AbstractGraph{Cint} end
 # TODO: abstract type AbstractSparseNautyGraph <: AbstractNautyGraph end
@@ -35,18 +35,17 @@ mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
     end
 end
 
-const NautyGraph = DenseNautyGraph{false}
-const NautyDiGraph = DenseNautyGraph{true}
-
 function DenseNautyGraph{D}(n::Integer, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {D}
     m = ceil(Cint, n / WORDSIZE)
     graphset = zeros(WordType, Int(n * m))
-    labels = initialize_vertexlabels(n, vertex_labels)
+    labels = _initialize_vertexlabels(n, vertex_labels)
     return DenseNautyGraph(graphset, labels, D)
 end
-
 function DenseNautyGraph{D}(adjmx::AbstractMatrix, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {D}
     n, _n = size(adjmx)
+
+    # Self loops are not allowed
+    @assert all(iszero, diag(adjmx))
 
     if !D
         @assert adjmx == adjmx'
@@ -54,8 +53,8 @@ function DenseNautyGraph{D}(adjmx::AbstractMatrix, vertex_labels::Union{Vector{<
         @assert n == _n
     end
     
-    graphset, _ = adjmatrix_to_graphset(adjmx)
-    labels = initialize_vertexlabels(n, vertex_labels)
+    graphset = _adjmatrix_to_graphset(adjmx)
+    labels = _initialize_vertexlabels(n, vertex_labels)
 
     return DenseNautyGraph(graphset, labels, D)
 end
@@ -76,259 +75,228 @@ end
 Base.show(io::Core.IO, g::DenseNautyGraph{false}) = print(io, "{$(nv(g)), $(ne(g))} undirected NautyGraph")
 Base.show(io::Core.IO, g::DenseNautyGraph{true}) = print(io, "{$(nv(g)), $(ne(g))} directed NautyGraph")
 
-labels(g::AbstractNautyGraph) = g.labels
-Graphs.nv(g::DenseNautyGraph) = g.n_vertices
-Graphs.ne(g::DenseNautyGraph) = g.n_edges
-Graphs.vertices(g::DenseNautyGraph) = Base.OneTo(nv(g))
-Graphs.has_vertex(g::DenseNautyGraph, v) = v ∈ vertices(g)
-function Graphs.has_edge(g::DenseNautyGraph, s::Integer, d::Integer)
-    i_row = s
-    i_col = 1 + (d - 1) ÷ WORDSIZE
-    k = mod1(d, WORDSIZE)
-    i_vec = _to_vecidx(i_row, i_col, g.n_words)
-    return has_bit(g.graphset[i_vec], k)
-end
-function Graphs.outdegree(g::DenseNautyGraph, v::Integer)
-    m = g.n_words
-    i = _to_vecidx(v, 1, m)
-    return sum(count_bits, @view g.graphset[i:i+m-1])
-end
-function Graphs.outneighbors(g::DenseNautyGraph, v::Integer)
-    neighs = zeros(Int, nv(g))
-    k = outneighbors!(neighs, g, v)
-    resize!(neighs, k)
-    return neighs
-end
-function outneighbors!(neighs::AbstractVector{<:Integer}, g::DenseNautyGraph, v::Integer)
-    m = g.n_words
-    i = _to_vecidx(v, 1, m)
-    return set_to_idxs!((@view g.graphset[i:i+m-1]), neighs, true)
-end
-function Graphs.indegree(g::DenseNautyGraph, v::Integer)
-    m = g.n_words
-    i_col = 1 + (v - 1) ÷ WORDSIZE
-    vmod = mod1(v, WORDSIZE)
-
-    idx_convert(i) = _to_vecidx(i, i_col, m)
-    counter(i) = has_bit(g.graphset[idx_convert(i)], vmod)
-    return sum(counter, 1:nv(g))
-end
-function Graphs.inneighbors(g::DenseNautyGraph, v::Integer)
-    i_col = 1 + (v - 1) ÷ WORDSIZE
-    idxs = _to_vecidx.(1:nv(g), Ref(i_col), Ref(g.n_words))
-
-    neighs = zeros(Cint, nv(g))
-    k = 1
-    vmod = mod1(v, WORDSIZE)
-    for (i, word) in enumerate(@view g.graphset[idxs])
-        if has_bit(word, vmod)
-            neighs[k] = i
-            k += 1
-        end
+begin # BASIC GRAPH API
+    labels(g::AbstractNautyGraph) = g.labels
+    Graphs.nv(g::DenseNautyGraph) = g.n_vertices
+    Graphs.ne(g::DenseNautyGraph) = g.n_edges
+    Graphs.vertices(g::DenseNautyGraph) = Base.OneTo(nv(g))
+    Graphs.has_vertex(g::DenseNautyGraph, v) = v ∈ vertices(g)
+    function Graphs.has_edge(g::DenseNautyGraph, s::Integer, d::Integer)
+        i_row = s
+        i_col = 1 + (d - 1) ÷ WORDSIZE
+        k = mod1(d, WORDSIZE)
+        i_vec = _to_vecidx(i_row, i_col, g.n_words)
+        return has_bit(g.graphset[i_vec], k)
     end
-    resize!(neighs, k - 1)
-    return neighs
-end
-
-Graphs.is_directed(::Type{<:DenseNautyGraph{D}}) where {D} = D
-Graphs.edgetype(::AbstractNautyGraph) = Edge{Cint}
-Base.eltype(::AbstractNautyGraph) = Cint
-Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
-
-function Graphs.adjacency_matrix(g::DenseNautyGraph, T::DataType=Int; dir::Symbol=:out)
-    n = nv(g)
-
-    es = _directed_edges(g)
-    k = length(es)
-    is, js, vals = zeros(T, k), zeros(T, k), ones(T, k)
-    for (i, e) in enumerate(es)
-        is[i] = e.src
-        js[i] = e.dst
+    function Graphs.outdegree(g::DenseNautyGraph, v::Integer)
+        m = g.n_words
+        i = _to_vecidx(v, 1, m)
+        return sum(count_bits, @view g.graphset[i:i+m-1])
     end
-    return sparse(is, js, vals, n, n)
-end
-
-function _directed_edges(g::DenseNautyGraph)
-    n, m = g.n_vertices, g.n_words
-
-    edges = Edge{Cint}[]
-    js = zeros(Cint, WORDSIZE)
-    for set_idx in eachindex(g.graphset)
-        i = 1 + (set_idx - 1) ÷ m
-        j0 = ((set_idx - 1) % m) * WORDSIZE
-
-        k = word_to_idxs!(g.graphset[set_idx], js)
-        js .+= j0
-        for j in 1:k
-            push!(edges, Edge{Cint}(i, js[j]))
-        end
+    function Graphs.outneighbors(g::DenseNautyGraph, v::Integer)
+        neighs = zeros(Int, nv(g))
+        k = outneighbors!(neighs, g, v)
+        resize!(neighs, k)
+        return neighs
     end
-
-    return edges
-end
-
-#TODO: define edgeiterator
-function Graphs.edges(g::DenseNautyGraph{true})
-    return _directed_edges(g)
-end
-function Graphs.edges(g::DenseNautyGraph{false})
-    edges = _directed_edges(g)
-    filter!(e -> e.src <= e.dst, edges) #TODO: optimize
-    return edges
-end
-
-function modify_edge!(g::AbstractNautyGraph, e::Edge, add::Bool)
-    # Adds or removes the edge e
-    _, m = g.n_vertices, g.n_words
-    i, j = e.src, e.dst
-
-    set_idx = 1 + (i - 1) * m + (j - 1) ÷ WORDSIZE
-    # left = 1000000000.... 
-    left = one(WordType) << (WORDSIZE - 1)
-    new_edge = left >> ((j - 1) % WORDSIZE)
-
-    word_old = g.graphset[set_idx]
-    if add
-        g.graphset[set_idx] |= new_edge
-        counter = +1
-    else
-        g.graphset[set_idx] &= ~new_edge
-        counter = -1
+    function outneighbors!(neighs::AbstractVector{<:Integer}, g::DenseNautyGraph, v::Integer)
+        m = g.n_words
+        i = _to_vecidx(v, 1, m)
+        return set_to_idxs!((@view g.graphset[i:i+m-1]), neighs, true)
     end
+    function Graphs.indegree(g::DenseNautyGraph, v::Integer)
+        m = g.n_words
+        i_col = 1 + (v - 1) ÷ WORDSIZE
+        vmod = mod1(v, WORDSIZE)
 
-    return g.graphset[set_idx] != word_old
-end
-
-function Graphs.add_edge!(g::DenseNautyGraph{true}, e::Edge)
-    edge_added = modify_edge!(g, e, true)
-    if edge_added
-        g.n_edges += 1
-        g.hashval = nothing
+        idx_convert(i) = _to_vecidx(i, i_col, m)
+        counter(i) = has_bit(g.graphset[idx_convert(i)], vmod)
+        return sum(counter, 1:nv(g))
     end
-    return edge_added
-end
-function Graphs.add_edge!(g::DenseNautyGraph{false}, e::Edge)
-    fwd_edge_added = modify_edge!(g, e, true)
-    bwd_edge_added = modify_edge!(g, reverse(e), true)
-    edge_added = fwd_edge_added && bwd_edge_added
+    function Graphs.inneighbors(g::DenseNautyGraph, v::Integer)
+        i_col = 1 + (v - 1) ÷ WORDSIZE
+        idxs = _to_vecidx.(1:nv(g), Ref(i_col), Ref(g.n_words))
 
-    if edge_added
-        g.n_edges += 1
-        g.hashval = nothing
-    end
-    return edge_added
-end
-Graphs.add_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.add_edge!(g, Graphs.Edge{Cint}(i, j))
-function Graphs.rem_edge!(g::DenseNautyGraph{true}, e::Edge)
-    edge_removed = modify_edge!(g, e, false)
-    if edge_removed
-        g.n_edges -= 1
-        g.hashval = nothing
-    end
-    return edge_removed
-end
-function Graphs.rem_edge!(g::DenseNautyGraph{false}, e::Edge)
-    fwd_edge_removed = modify_edge!(g, e, false)
-    bwd_edge_removed = modify_edge!(g, reverse(e), false)
-    edge_removed = fwd_edge_removed && bwd_edge_removed
-
-    if edge_removed
-        g.n_edges -= 1
-        g.hashval = nothing
-    end
-    return edge_removed
-end
-Graphs.rem_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.rem_edge!(g, Graphs.Edge{Cint}(i, j))
-
-function Graphs.add_vertex!(g::DenseNautyGraph, label::Union{<:Integer,Nothing}=nothing)
-    if isnothing(label)
-        labeled = !all(iszero, g.labels)
-        labeled && error("Cannot add an unlabeled vertex to a labeled nautygraph. Use `add_vertex!(g, label)` to add a labeled vertex.")
-    end
-
-    n = nv(g)
-    m = g.n_words
-
-    if n + 1 > m * WORDSIZE
-        m = g.n_words += 1
-        for i in m:m:n*m
-            insert!(g.graphset, i, zero(WordType))
-        end
-    end
-
-    append!(g.graphset, [zero(WordType) for _ in 1:m])
-
-    if isnothing(label)
-        push!(g.labels, zero(Cint))
-    else
-        push!(g.labels, convert(Cint, label))
-    end
-
-    g.hashval = nothing
-    g.n_vertices += 1
-    return true
-end
-function Graphs.add_vertices!(g::AbstractNautyGraph, labels::Union{AbstractVector{<:Integer},Nothing}=nothing)
-    for l in labels
-        add_vertex!(g, l)
-    end
-    return length(labels)
-end
-function Graphs.rem_vertices!(g::DenseNautyGraph, inds::AbstractVector{<:Integer})
-    n = nv(g)
-    if any(inds .> n)
-        return false
-    end
-
-    inds = sort(inds)
-    m = g.n_words
-
-    i_vecs = _to_vecidx.(inds, Ref(1), m)
-    deleteat!(g.graphset, Iterators.flatten(i:i+m-1 for i in sort(i_vecs)))
-    # Shift all bits such that the vertices are renamed correctly
-    d = 0
-    for i in inds
-        i -= d
-
-        i_col = 1 + (i - 1) ÷ WORDSIZE
-        k = i - (i_col - 1) * WORDSIZE
-        for j in eachindex(g.graphset)
-            _, j_col = _to_matrixidx(j, m)
-
-            if j_col < i_col
-                continue
+        neighs = zeros(Cint, nv(g))
+        k = 1
+        vmod = mod1(v, WORDSIZE)
+        for (i, word) in enumerate(@view g.graphset[idxs])
+            if has_bit(word, vmod)
+                neighs[k] = i
+                k += 1
             end
-            offset = j_col == i_col ? k : 0
+        end
+        resize!(neighs, k - 1)
+        return neighs
+    end
+    function Graphs.edges(g::DenseNautyGraph{true})
+        #TODO: define edgeiterator
+        return _directed_edges(g)
+    end
+    function Graphs.edges(g::DenseNautyGraph{false})
+        edges = _directed_edges(g)
+        filter!(e -> e.src <= e.dst, edges) #TODO: optimize
+        return edges
+    end
 
-            next_word = j_col != m ? g.graphset[j+1] : zero(WordType)
-            g.graphset[j] = push_bits(g.graphset[j], next_word, WORDSIZE - offset, 1)
+    Graphs.is_directed(::Type{<:DenseNautyGraph{D}}) where {D} = D
+    Graphs.edgetype(::AbstractNautyGraph) = Edge{Cint}
+    Base.eltype(::AbstractNautyGraph) = Cint
+    Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
+
+    function Graphs.adjacency_matrix(g::DenseNautyGraph, T::DataType=Int; dir::Symbol=:out)
+        n = nv(g)
+    
+        es = _directed_edges(g)
+        k = length(es)
+        is, js, vals = zeros(T, k), zeros(T, k), ones(T, k)
+        for (i, e) in enumerate(es)
+            is[i] = e.src
+            js[i] = e.dst
+        end
+        return sparse(is, js, vals, n, n)
+    end
+end
+
+begin # GRAPH MODIFY METHODS
+    function Graphs.add_edge!(g::DenseNautyGraph{true}, e::Edge)
+        edge_added = _modify_edge!(g, e, true)
+        if edge_added
+            g.n_edges += 1
+            g.hashval = nothing
+        end
+        return edge_added
+    end
+    function Graphs.add_edge!(g::DenseNautyGraph{false}, e::Edge)
+        fwd_edge_added = _modify_edge!(g, e, true)
+        bwd_edge_added = _modify_edge!(g, reverse(e), true)
+        edge_added = fwd_edge_added && bwd_edge_added
+
+        if edge_added
+            g.n_edges += 1
+            g.hashval = nothing
+        end
+        return edge_added
+    end
+    Graphs.add_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.add_edge!(g, Graphs.Edge{Cint}(i, j))
+
+    function Graphs.rem_edge!(g::DenseNautyGraph{true}, e::Edge)
+        edge_removed = _modify_edge!(g, e, false)
+        if edge_removed
+            g.n_edges -= 1
+            g.hashval = nothing
+        end
+        return edge_removed
+    end
+    function Graphs.rem_edge!(g::DenseNautyGraph{false}, e::Edge)
+        fwd_edge_removed = _modify_edge!(g, e, false)
+        bwd_edge_removed = _modify_edge!(g, reverse(e), false)
+        edge_removed = fwd_edge_removed && bwd_edge_removed
+
+        if edge_removed
+            g.n_edges -= 1
+            g.hashval = nothing
+        end
+        return edge_removed
+    end
+    Graphs.rem_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.rem_edge!(g, Graphs.Edge{Cint}(i, j))
+
+    function Graphs.add_vertex!(g::DenseNautyGraph, label::Union{<:Integer,Nothing}=nothing)
+        if isnothing(label)
+            labeled = !all(iszero, g.labels)
+            labeled && error("Cannot add an unlabeled vertex to a labeled nautygraph. Use `add_vertex!(g, label)` to add a labeled vertex.")
         end
 
-        d += 1
+        n = nv(g)
+        m = g.n_words
+
+        if n + 1 > m * WORDSIZE
+            m = g.n_words += 1
+            for i in m:m:n*m
+                insert!(g.graphset, i, zero(WordType))
+            end
+        end
+
+        append!(g.graphset, [zero(WordType) for _ in 1:m])
+
+        if isnothing(label)
+            push!(g.labels, zero(Cint))
+        else
+            push!(g.labels, convert(Cint, label))
+        end
+
+        g.hashval = nothing
+        g.n_vertices += 1
+        return true
+    end
+    function Graphs.add_vertices!(g::AbstractNautyGraph, n::Integer, labels::Union{AbstractVector{<:Integer},Nothing}=nothing)
+        if isnothing(labels)
+            return sum([add_vertex!(g) for i in 1:n])
+        end
+
+        @assert n == length(labels)
+        for l in labels
+            add_vertex!(g, l)
+        end
+        return n
     end
 
-    deleteat!(g.labels, inds)
+    function Graphs.rem_vertices!(g::DenseNautyGraph, inds::AbstractVector{<:Integer})
+        n = nv(g)
+        if any(inds .> n)
+            return false
+        end
 
-    g.hashval = nothing
-    g.n_vertices -= length(inds)
+        inds = sort(inds)
+        m = g.n_words
 
-    m_new = ceil(Cint, g.n_vertices / WORDSIZE)
-    if m_new < m
-        deleteat!(g.graphset, Iterators.flatten(i+m_new:i+m-1 for i in 1:m:g.n_vertices*m))
-        g.n_words = m_new
+        i_vecs = _to_vecidx.(inds, Ref(1), m)
+        deleteat!(g.graphset, Iterators.flatten(i:i+m-1 for i in sort(i_vecs)))
+        # Shift all bits such that the vertices are renamed correctly
+        d = 0
+        for i in inds
+            i -= d
+
+            i_col = 1 + (i - 1) ÷ WORDSIZE
+            k = i - (i_col - 1) * WORDSIZE
+            for j in eachindex(g.graphset)
+                _, j_col = _to_matrixidx(j, m)
+
+                if j_col < i_col
+                    continue
+                end
+                offset = j_col == i_col ? k : 0
+
+                next_word = j_col != m ? g.graphset[j+1] : zero(WordType)
+                g.graphset[j] = push_bits(g.graphset[j], next_word, WORDSIZE - offset, 1)
+            end
+
+            d += 1
+        end
+
+        deleteat!(g.labels, inds)
+
+        g.hashval = nothing
+        g.n_vertices -= length(inds)
+
+        m_new = ceil(Cint, g.n_vertices / WORDSIZE)
+        if m_new < m
+            deleteat!(g.graphset, Iterators.flatten(i+m_new:i+m-1 for i in 1:m:g.n_vertices*m))
+            g.n_words = m_new
+        end
+        
+        n_edges = 0
+        for word in g.graphset
+            n_edges += count_bits(word)
+        end
+        if !is_directed(g)
+            n_edges ÷= 2
+        end
+        g.n_edges = n_edges
+        return true
     end
-    
-    n_edges = 0
-    for word in g.graphset
-        n_edges += count_bits(word)
-    end
-    if !is_directed(g)
-        n_edges ÷= 2
-    end
-    g.n_edges = n_edges
-    return true
+    Graphs.rem_vertex!(g::DenseNautyGraph, i::Integer) = rem_vertices!(g, [i])
 end
-rem_vertex!(g::DenseNautyGraph, i::Integer) = rem_vertices!(g, [i])
 
 function Graphs.blockdiag(g::G, h::G) where {G<:DenseNautyGraph}
     ng, nh = g.n_vertices, h.n_vertices

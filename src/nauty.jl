@@ -61,13 +61,13 @@ end
 #     # ... 
 # end
 
-function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) where {T} #TODO: allow nautyoptions to be overwritten
+function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) where {T} # TODO: allow nautyoptions to be overwritten
     n, m = g.n_vertices, g.n_words
 
-    options = NautyOptions()
+    options = NautyOptions() # TODO: allocate default options outside and make sure they do not interfere with multithreading
     options.getcanon = canonical_form
     options.digraph = is_directed(g)
-    options.defaultptn = all(iszero, g.labels) || ignore_vertex_labels #TODO: check more carefully if lab/ptn is valid
+    options.defaultptn = all(iszero, g.labels) || ignore_vertex_labels # TODO: check more carefully if lab/ptn is valid
     lab, ptn = _vertexlabels_to_labptn(g.labels)
 
     stats = NautyStatistics()
@@ -76,7 +76,7 @@ function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex
     h = zero(g.graphset)
 
     @ccall nauty_lib.densenauty_wrap(
-        g.graphset::Ref{Cuint},
+        g.graphset::Ref{WordType},
         lab::Ref{Cint},
         ptn::Ref{Cint},
         orbits::Ref{Cint},
@@ -84,9 +84,15 @@ function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex
         Ref(stats)::Ref{NautyStatistics},
         m::Cint,
         n::Cint,
-        h::Ref{Cuint})::Cvoid
+        h::Ref{WordType})::Cvoid
 
-    grpsize = T(stats.grpsize1 * 10^stats.grpsize2)
+    if stats.grpsize1 * 10^stats.grpsize2 < typemax(T)
+        grpsize = T(stats.grpsize1 * 10^stats.grpsize2)
+    else
+        # TODO handle this better
+        @warn "automorphism group size overflow"
+        grpsize = zero(T)
+    end
     # autmorph = AutomorphismGroup{T}(grpsize, orbits, stats.numgenerators) # TODO: summarize useful automorphism group info
 
     if canonical_form
@@ -100,33 +106,29 @@ function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex
 end
 nauty(g::DenseNautyGraph, canonical_form=true; kwargs...) = nauty(Int, g, canonical_form; kwargs...)
 
-function _fill_hash!(g::AbstractNautyGraph)
-    n, canong, canon_perm = nauty(g, true)
-    topology_hash = hash(canong)
-    hashval = hash(g.labels[canon_perm], topology_hash)
-    g.hashval = hashval
-    return hashval, n
+function _nautyhash(g::AbstractNautyGraph)
+    grpsize, canong, canon_perm = nauty(g, true)
+    hashval = hash(view(g.labels, canon_perm), hash(canong))
+    return grpsize, canong, canon_perm, hashval
 end
 
 function canonize!(g::AbstractNautyGraph)
-    n, canong, canon_perm = nauty(g, true)
-    topology_hash = hash(canong)
+    grpsize, canong, canon_perm, hashval = _nautyhash(g)
 
     g.graphset .= canong
     g.labels .= g.labels[canon_perm]
-    g.hashval = hash(g.labels, topology_hash)
-
-    return canon_perm, n
+    g.hashval = hashval
+    return canon_perm, grpsize
 end
 
 function Base.hash(g::AbstractNautyGraph)
-    hashval = g.hashval
-    if !isnothing(hashval)
-        return hashval
+    if !isnothing(g.hashval)
+        return g.hashval
     end
 
     # TODO: error checking and so on
-    _fill_hash!(g)
+    _, _, _, hashval = _nautyhash(g)
+    g.hashval = hashval
     return g.hashval
 end
 
