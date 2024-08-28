@@ -12,7 +12,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 [compat]
 Downloads = "1.6"
 Graphs = "1.9"
-SparseArrays = "1.10"
+SparseArrays = "1.6"
 julia = "1.6"
 
 [extras]
