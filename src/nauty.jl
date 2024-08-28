@@ -100,33 +100,29 @@ function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex
 end
 nauty(g::DenseNautyGraph, canonical_form=true; kwargs...) = nauty(Int, g, canonical_form; kwargs...)
 
-function _fill_hash!(g::AbstractNautyGraph)
-    n, canong, canon_perm = nauty(g, true)
-    topology_hash = hash(canong)
-    hashval = hash(g.labels[canon_perm], topology_hash)
-    g.hashval = hashval
-    return hashval, n
+function _nautyhash(g::AbstractNautyGraph)
+    grpsize, canong, canon_perm = nauty(g, true)
+    hashval = hash(view(g.labels, canon_perm), hash(canong))
+    return grpsize, canong, canon_perm, hashval
 end
 
 function canonize!(g::AbstractNautyGraph)
-    n, canong, canon_perm = nauty(g, true)
-    topology_hash = hash(canong)
+    grpsize, canong, canon_perm, hashval = _nautyhash(g)
 
     g.graphset .= canong
     g.labels .= g.labels[canon_perm]
-    g.hashval = hash(g.labels, topology_hash)
-
-    return canon_perm, n
+    g.hashval = hashval
+    return canon_perm, grpsize
 end
 
 function Base.hash(g::AbstractNautyGraph)
-    hashval = g.hashval
-    if !isnothing(hashval)
-        return hashval
+    if !isnothing(g.hashval)
+        return g.hashval
     end
 
     # TODO: error checking and so on
-    _fill_hash!(g)
+    _, _, _, hashval = _nautyhash(g)
+    g.hashval = hashval
     return g.hashval
 end
 
