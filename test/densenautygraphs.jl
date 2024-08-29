@@ -1,9 +1,9 @@
 using LinearAlgebra
 
-@testset "modify" begin
-    rng = Random.Random.MersenneTwister(0) # Use MersenneTwister for Julia 1.6 compat
-    symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1); A[i, i] = 0; end; A)
+rng = Random.Random.MersenneTwister(0) # Use MersenneTwister for Julia 1.6 compat
+symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1); A[i, i] = 0; end; A)
 
+@testset "modify" begin
     nverts = [5, 10, 20, 31, 32, 33, 50, 63, 64, 65, 100, 200, 500, 1000]
     rvs = [sort(unique(rand(rng, 1:i, 4))) for i in nverts]
     As = [symmetrize_adjmx(rand(rng, [0, 1], i, i)) for i in nverts]
@@ -53,7 +53,7 @@ using LinearAlgebra
 end
 
 @testset "methods" begin
-    empty_g = NautyGraphs(0)
+    empty_g = NautyGraph(0)
     @test nv(empty_g) == 0
     @test ne(empty_g) == 0
     
