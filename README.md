@@ -4,7 +4,7 @@
 [![Build Status](https://github.com/mxhbl/NautyGraphs.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/mxhbl/NautyGraphs.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/mxhbl/NautyGraphs.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/mxhbl/NautyGraphs.jl)
 
-NautyGraphs.jl is a simple Julia interface to [_nauty_](https://pallini.di.uniroma1.it/) by Brendan McKay. It allows for efficient isomorphism checking, canonical labeling, and hashing of vertex-labeled graphs. In addition, the graph representations defined by NautyGraphs.jl are fully compatible with the [Graphs.jl](https://github.com/JuliaGraphs/Graphs.jl) API, making it easy to create, modify, and convert graphs from one format to the other. 
+NautyGraphs.jl is a Julia interface to [_nauty_](https://pallini.di.uniroma1.it/) by Brendan McKay. It allows for efficient isomorphism checking, canonical labeling, and hashing of vertex-labeled graphs. In addition, NautyGraphs.jl is fully compatible with the [Graphs.jl](https://github.com/JuliaGraphs/Graphs.jl) API. This makes it easy to create or modify graphs through familiar syntax, and allows NautyGraphs to work with a large library of graph algorithms.
 **Warning**: NautyGraph.jl currently requires a POSIX compliant operating system with gcc installed. This requirement will be lifted in the future.
 ## Installation
 To install NautyGraphs.jl from the Julia REPL, enter `]` to enter Pkg mode, and then run
@@ -30,11 +30,11 @@ end
 Internally, a `NautyGraph` is represented as a bit vector, so that it can be passed directly to _nauty_ without any conversion.
 To check whether two graphs are isomorphic, use `is_isomorphic` or `≃` (`\simeq`):
 ```
-julia> adjacency_matrix(g) == adjacency_matrix(h)
-false
-
 julia> g ≃ h
 true
+
+julia> adjacency_matrix(g) == adjacency_matrix(h)
+false
 ```
 Use `canonize!(g)` to reorder `g` into canonical order. `canonize!(g)` also returns the permutation needed to canonize `g`, as well as the size of its automorphism group:
 ```
