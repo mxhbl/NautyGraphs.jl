@@ -5,6 +5,6 @@ using NautyGraphs
 
 
 @testset "NautyGraphs" begin
-    include("modify.jl")
+    include("densenautygraphs.jl")
     include("nauty.jl")
 end

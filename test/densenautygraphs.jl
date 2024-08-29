@@ -1,7 +1,7 @@
 using LinearAlgebra
 
-@testset "modify" begin
-    rng = Xoshiro(0)
+@testset "densenautygraphs" begin
+    rng = Random.Random.MersenneTwister(0) # Use MersenneTwister for Julia 1.6 compat
     symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1); A[i, i] = 0; end; A)
 
     nverts = [5, 10, 20, 50, 100, 200, 500, 1000]

@@ -5,7 +5,7 @@ using Random
 # Benchmark common graph operations on NautyGraphs against standard Graphs
 
 begin # SETUP
-    rng = Xoshiro(0)
+    rng = Random.Random.MersenneTwister(0) # Use MersenneTwister for Julia 1.6 compat
     symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1); A[i, i] = 0; end; A)
     A10 = symmetrize_adjmx(rand(rng, [0, 1], 10, 10))
     A100 = symmetrize_adjmx(rand(rng, [0, 1], 100, 100))
