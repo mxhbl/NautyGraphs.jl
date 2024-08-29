@@ -18,6 +18,19 @@ begin # SETUP
     g100 = Graph(A100)
     g1000 = Graph(A1000)
 
+
+    function generate_isomorphs(rng, g)
+        admx = adjacency_matrix(g)
+        perm = shuffle(rng, collect(1:size(admx, 1)))
+        admx_perm = admx[perm, perm]
+        
+        gperm = Graph(admx_perm)
+        ng = NautyGraph(g)
+        ngperm = NautyGraph(gperm)
+
+        return g, gperm, ng, ngperm
+    end
+
     SUITE = BenchmarkGroup()
     nautygraphs = SUITE["nautygraphs"] = BenchmarkGroup()
     graphs = SUITE["graphs"] = BenchmarkGroup()
@@ -157,45 +170,62 @@ begin # MODIFY
 
     foreach(g->add_edge!(g, 2, 8), [ng10, ng100, ng1000])
 
-    nautygraphs["modify"]["rem_edge10"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy(ng10)) evals=1
-    nautygraphs["modify"]["rem_edge100"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy(ng100)) evals=1
-    nautygraphs["modify"]["rem_edge1000"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy(ng100)) evals=1
+    nautygraphs["modify"]["rem_edge10"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy($ng10)) evals=1
+    nautygraphs["modify"]["rem_edge100"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy($ng100)) evals=1
+    nautygraphs["modify"]["rem_edge1000"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy($ng100)) evals=1
 
-    nautygraphs["modify"]["rem_vertex10"] = @benchmarkable rem_vertex!(gg, 5) setup=(gg=copy(ng10)) evals=1
-    nautygraphs["modify"]["rem_vertex100"] = @benchmarkable rem_vertex!(gg, 50) setup=(gg=copy(ng100)) evals=1
-    nautygraphs["modify"]["rem_vertex1000"] = @benchmarkable rem_vertex!(gg, 500) setup=(gg=copy(ng1000)) evals=1
+    nautygraphs["modify"]["rem_vertex10"] = @benchmarkable rem_vertex!(gg, 5) setup=(gg=copy($ng10)) evals=1
+    nautygraphs["modify"]["rem_vertex100"] = @benchmarkable rem_vertex!(gg, 50) setup=(gg=copy($ng100)) evals=1
+    nautygraphs["modify"]["rem_vertex1000"] = @benchmarkable rem_vertex!(gg, 500) setup=(gg=copy($ng1000)) evals=1
 
-    nautygraphs["modify"]["rem_vertices10"] = @benchmarkable rem_vertices!(gg, [1, 5, 8]) setup=(gg=copy(ng10)) evals=1
-    nautygraphs["modify"]["rem_vertices100"] = @benchmarkable rem_vertices!(gg, [1, 50, 80]) setup=(gg=copy(ng100)) evals=1
-    nautygraphs["modify"]["rem_vertices1000"] = @benchmarkable rem_vertices!(gg, [1, 500, 800]) setup=(gg=copy(ng1000)) evals=1
+    nautygraphs["modify"]["rem_vertices10"] = @benchmarkable rem_vertices!(gg, [1, 5, 8]) setup=(gg=copy($ng10)) evals=1
+    nautygraphs["modify"]["rem_vertices100"] = @benchmarkable rem_vertices!(gg, [1, 50, 80]) setup=(gg=copy($ng100)) evals=1
+    nautygraphs["modify"]["rem_vertices1000"] = @benchmarkable rem_vertices!(gg, [1, 500, 800]) setup=(gg=copy($ng1000)) evals=1
 
     ######################################################
 
-    graphs["modify"]["add_edge10"] = @benchmarkable add_edge!(gg, 2, 8) setup=(gg=copy(g10)) evals=1
-    graphs["modify"]["add_edge100"] = @benchmarkable add_edge!(gg, 2, 8) setup=(gg=copy(g100)) evals=1
-    graphs["modify"]["add_edge1000"] = @benchmarkable add_edge!(gg, 2, 8) setup=(gg=copy(g100)) evals=1
+    graphs["modify"]["add_edge10"] = @benchmarkable add_edge!(gg, 2, 8) setup=(gg=copy($g10)) evals=1
+    graphs["modify"]["add_edge100"] = @benchmarkable add_edge!(gg, 2, 8) setup=(gg=copy($g100)) evals=1
+    graphs["modify"]["add_edge1000"] = @benchmarkable add_edge!(gg, 2, 8) setup=(gg=copy($g100)) evals=1
 
-    graphs["modify"]["add_vertex10"] = @benchmarkable add_vertex!(gg) setup=(gg=copy(g10)) evals=1
-    graphs["modify"]["add_vertex100"] = @benchmarkable add_vertex!(gg) setup=(gg=copy(g100)) evals=1
-    graphs["modify"]["add_vertex1000"] = @benchmarkable add_vertex!(gg) setup=(gg=copy(g1000)) evals=1
+    graphs["modify"]["add_vertex10"] = @benchmarkable add_vertex!(gg) setup=(gg=copy($g10)) evals=1
+    graphs["modify"]["add_vertex100"] = @benchmarkable add_vertex!(gg) setup=(gg=copy($g100)) evals=1
+    graphs["modify"]["add_vertex1000"] = @benchmarkable add_vertex!(gg) setup=(gg=copy($g1000)) evals=1
 
-    graphs["modify"]["add_vertices10"] = @benchmarkable add_vertices!(gg, 10) setup=(gg=copy(g10)) evals=1
-    graphs["modify"]["add_vertices100"] = @benchmarkable add_vertices!(gg, 100) setup=(gg=copy(g100)) evals=1
-    graphs["modify"]["add_vertices1000"] = @benchmarkable add_vertices!(gg, 1000) setup=(gg=copy(g1000)) evals=1
+    graphs["modify"]["add_vertices10"] = @benchmarkable add_vertices!(gg, 10) setup=(gg=copy($g10)) evals=1
+    graphs["modify"]["add_vertices100"] = @benchmarkable add_vertices!(gg, 100) setup=(gg=copy($g100)) evals=1
+    graphs["modify"]["add_vertices1000"] = @benchmarkable add_vertices!(gg, 1000) setup=(gg=copy($g1000)) evals=1
 
     foreach(g->add_edge!(g, 2, 8), [g10, g100, g1000])
 
-    graphs["modify"]["rem_edge10"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy(g10)) evals=1
-    graphs["modify"]["rem_edge100"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy(g100)) evals=1
-    graphs["modify"]["rem_edge1000"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy(g100)) evals=1
+    graphs["modify"]["rem_edge10"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy($g10)) evals=1
+    graphs["modify"]["rem_edge100"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy($g100)) evals=1
+    graphs["modify"]["rem_edge1000"] = @benchmarkable rem_edge!(gg, 2, 8) setup=(gg=copy($g100)) evals=1
 
-    graphs["modify"]["rem_vertex10"] = @benchmarkable rem_vertex!(gg, 5) setup=(gg=copy(g10)) evals=1
-    graphs["modify"]["rem_vertex100"] = @benchmarkable rem_vertex!(gg, 50) setup=(gg=copy(g100)) evals=1
-    graphs["modify"]["rem_vertex1000"] = @benchmarkable rem_vertex!(gg, 500) setup=(gg=copy(g1000)) evals=1
+    graphs["modify"]["rem_vertex10"] = @benchmarkable rem_vertex!(gg, 5) setup=(gg=copy($g10)) evals=1
+    graphs["modify"]["rem_vertex100"] = @benchmarkable rem_vertex!(gg, 50) setup=(gg=copy($g100)) evals=1
+    graphs["modify"]["rem_vertex1000"] = @benchmarkable rem_vertex!(gg, 500) setup=(gg=copy($g1000)) evals=1
 
-    graphs["modify"]["rem_vertices10"] = @benchmarkable rem_vertices!(gg, [1, 5, 8]) setup=(gg=copy(g10)) evals=1
-    graphs["modify"]["rem_vertices100"] = @benchmarkable rem_vertices!(gg, [1, 50, 80]) setup=(gg=copy(g100)) evals=1
-    graphs["modify"]["rem_vertices1000"] = @benchmarkable rem_vertices!(gg, [1, 500, 800]) setup=(gg=copy(g1000)) evals=1
+    graphs["modify"]["rem_vertices10"] = @benchmarkable rem_vertices!(gg, [1, 5, 8]) setup=(gg=copy($g10)) evals=1
+    graphs["modify"]["rem_vertices100"] = @benchmarkable rem_vertices!(gg, [1, 50, 80]) setup=(gg=copy($g100)) evals=1
+    graphs["modify"]["rem_vertices1000"] = @benchmarkable rem_vertices!(gg, [1, 500, 800]) setup=(gg=copy($g1000)) evals=1
+end
+
+begin # ISOMORPHISM
+    nautygraphs["isomorphism"] = BenchmarkGroup()
+    graphs["isomorphism"] = BenchmarkGroup()
+
+    g_e10, gp_e10, ng_e10, ngp_e10 = generate_isomorphs(rng, erdos_renyi(10, 0.5; rng=rng))
+    nautygraphs["isomorphism"]["erdos_renyi10"]= @benchmarkable is_isomorphic(a[1], a[2]) setup=(a=[copy($ng_e10), copy($ngp_e10)]) evals=1
+    graphs["isomorphism"]["erdos_renyi10"] = @benchmarkable Graphs.Experimental.has_isomorph($g_e10, $gp_e10) evals=1
+
+    g_e100, gp_e100, ng_e100, ngp_e100 = generate_isomorphs(rng, erdos_renyi(100, 0.05; rng=rng))
+    nautygraphs["isomorphism"]["erdos_renyi100"]= @benchmarkable is_isomorphic(a[1], a[2]) setup=(a=[copy($ng_e100), copy($ngp_e100)]) evals=1
+    graphs["isomorphism"]["erdos_renyi100"] = @benchmarkable Graphs.Experimental.has_isomorph($g_e100, $gp_e100) evals=1
+
+    g_e1000, gp_e1000, ng_e1000, ngp_e1000 = generate_isomorphs(rng, erdos_renyi(1000, 0.005; rng=rng))
+    nautygraphs["isomorphism"]["erdos_renyi1000"]= @benchmarkable is_isomorphic(a[1], a[2]) setup=(a=[copy($ng_e1000), copy($ngp_e1000)]) evals=1
+    graphs["isomorphism"]["erdos_renyi1000"] = @benchmarkable Graphs.Experimental.has_isomorph($g_e1000, $gp_e1000) evals=1
 end
 
 begin # EVAL
