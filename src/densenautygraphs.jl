@@ -143,6 +143,7 @@ begin # BASIC GRAPH API
     Graphs.edgetype(::AbstractNautyGraph) = Edge{Cint}
     Base.eltype(::AbstractNautyGraph) = Cint
     Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
+    Base.zero(::Type{G}) where {G<:AbstractNautyGraph} = G(0)
 
     function Graphs.adjacency_matrix(g::DenseNautyGraph, T::DataType=Int; dir::Symbol=:out)
         n = nv(g)
