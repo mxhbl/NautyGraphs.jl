@@ -86,10 +86,10 @@ function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex
         n::Cint,
         h::Ref{WordType})::Cvoid
 
+    # TODO: clean this up
     if stats.grpsize1 * 10^stats.grpsize2 < typemax(T)
-        grpsize = T(stats.grpsize1 * 10^stats.grpsize2)
+        grpsize = round(T, stats.grpsize1 * 10^stats.grpsize2)
     else
-        # TODO handle this better
         @warn "automorphism group size overflow"
         grpsize = zero(T)
     end
