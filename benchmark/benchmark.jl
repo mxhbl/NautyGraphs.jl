@@ -4,9 +4,41 @@ using Random
 
 # Benchmark common graph operations on NautyGraphs against standard Graphs
 
+symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1); A[i, i] = 0; end; A)
+function isomorphism_benchmark(rng, graph_gen, args...; n, random_gen=true, digraph=false)
+    gs = random_gen ? [graph_gen(args...; rng=rng) for _ in 1:n] : [graph_gen(args...) for _ in 1:n]
+    gps = []
+
+    ngs = []
+    ngps = []
+
+    for g in gs
+        admx = adjacency_matrix(g)
+        perm = shuffle(rng, collect(1:size(admx, 1)))
+        admx_perm = admx[perm, perm]
+        
+        if digraph
+            gperm = DiGraph(admx_perm)
+            ng = NautyDiGraph(g)
+            ngperm = NautyDiGraph(gperm)
+        else
+            gperm = Graph(admx_perm)
+            ng = NautyGraph(g)
+            ngperm = NautyGraph(gperm)
+        end
+
+        push!(gps, gperm)
+        push!(ngs, ng)
+        push!(ngps, ngperm)
+    end
+    nautygraph_benchs = @benchmarkable foreach(a->(is_isomorphic(a[1], a[2]); a[1].hashval=nothing; a[2].hashval=nothing;), zip($ngs, $ngps))
+    graph_benchs = @benchmarkable foreach(a->Graphs.Experimental.has_isomorph(a[1], a[2]), zip($gs, $gps))
+
+    return nautygraph_benchs, graph_benchs
+end
+
 begin # SETUP
     rng = Random.Random.MersenneTwister(0) # Use MersenneTwister for Julia 1.6 compat
-    symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1); A[i, i] = 0; end; A)
     A10 = symmetrize_adjmx(rand(rng, [0, 1], 10, 10))
     A100 = symmetrize_adjmx(rand(rng, [0, 1], 100, 100))
     A1000 = symmetrize_adjmx(rand(rng, [0, 1], 1000, 1000))
@@ -17,19 +49,6 @@ begin # SETUP
     g10 = Graph(A10)
     g100 = Graph(A100)
     g1000 = Graph(A1000)
-
-
-    function generate_isomorphs(rng, g)
-        admx = adjacency_matrix(g)
-        perm = shuffle(rng, collect(1:size(admx, 1)))
-        admx_perm = admx[perm, perm]
-        
-        gperm = Graph(admx_perm)
-        ng = NautyGraph(g)
-        ngperm = NautyGraph(gperm)
-
-        return g, gperm, ng, ngperm
-    end
 
     SUITE = BenchmarkGroup()
     nautygraphs = SUITE["nautygraphs"] = BenchmarkGroup()
@@ -215,17 +234,26 @@ begin # ISOMORPHISM
     nautygraphs["isomorphism"] = BenchmarkGroup()
     graphs["isomorphism"] = BenchmarkGroup()
 
-    g_e10, gp_e10, ng_e10, ngp_e10 = generate_isomorphs(rng, erdos_renyi(10, 0.5; rng=rng))
-    nautygraphs["isomorphism"]["erdos_renyi10"]= @benchmarkable is_isomorphic(a[1], a[2]) setup=(a=[copy($ng_e10), copy($ngp_e10)]) evals=1
-    graphs["isomorphism"]["erdos_renyi10"] = @benchmarkable Graphs.Experimental.has_isomorph($g_e10, $gp_e10) evals=1
+    nautygraphs["isomorphism"]["erdos_renyi10"], graphs["isomorphism"]["erdos_renyi10"] = isomorphism_benchmark(rng, erdos_renyi, 10, 0.5; n=100)
+    nautygraphs["isomorphism"]["erdos_renyi100"], graphs["isomorphism"]["erdos_renyi100"] = isomorphism_benchmark(rng, erdos_renyi, 100, 0.05; n=100)
+    nautygraphs["isomorphism"]["erdos_renyi1000"], graphs["isomorphism"]["erdos_renyi1000"] = isomorphism_benchmark(rng, erdos_renyi, 1000, 0.005; n=100)
 
-    g_e100, gp_e100, ng_e100, ngp_e100 = generate_isomorphs(rng, erdos_renyi(100, 0.05; rng=rng))
-    nautygraphs["isomorphism"]["erdos_renyi100"]= @benchmarkable is_isomorphic(a[1], a[2]) setup=(a=[copy($ng_e100), copy($ngp_e100)]) evals=1
-    graphs["isomorphism"]["erdos_renyi100"] = @benchmarkable Graphs.Experimental.has_isomorph($g_e100, $gp_e100) evals=1
+    nautygraphs["isomorphism"]["regular10_3"], graphs["isomorphism"]["regular10_3"] = isomorphism_benchmark(rng, random_regular_graph, 10, 3; n=100)
+    nautygraphs["isomorphism"]["regular100_3"], graphs["isomorphism"]["regular100_3"] = isomorphism_benchmark(rng, random_regular_graph, 100, 3; n=100)
 
-    g_e1000, gp_e1000, ng_e1000, ngp_e1000 = generate_isomorphs(rng, erdos_renyi(1000, 0.005; rng=rng))
-    nautygraphs["isomorphism"]["erdos_renyi1000"]= @benchmarkable is_isomorphic(a[1], a[2]) setup=(a=[copy($ng_e1000), copy($ngp_e1000)]) evals=1
-    graphs["isomorphism"]["erdos_renyi1000"] = @benchmarkable Graphs.Experimental.has_isomorph($g_e1000, $gp_e1000) evals=1
+    nautygraphs["isomorphism"]["regular10_8"], graphs["isomorphism"]["regular10_8"] = isomorphism_benchmark(rng, random_regular_graph, 10, 8; n=100)
+    nautygraphs["isomorphism"]["regular100_8"], graphs["isomorphism"]["regular100_8"] = isomorphism_benchmark(rng, random_regular_graph, 100, 8; n=100)
+
+    nautygraphs["isomorphism"]["binary_tree4"], graphs["isomorphism"]["binary_tree4"] = isomorphism_benchmark(rng, binary_tree, 4; n=100, random_gen=false)
+    nautygraphs["isomorphism"]["binary_tree8"], graphs["isomorphism"]["binary_tree8"] = isomorphism_benchmark(rng, binary_tree, 8; n=100, random_gen=false)
+
+    nautygraphs["isomorphism"]["uniform_tree10"], graphs["isomorphism"]["uniform_tree10"] = isomorphism_benchmark(rng, uniform_tree, 10; n=100)
+    nautygraphs["isomorphism"]["uniform_tree100"], graphs["isomorphism"]["uniform_tree100"] = isomorphism_benchmark(rng, uniform_tree, 100; n=100)
+    nautygraphs["isomorphism"]["uniform_tree1000"], graphs["isomorphism"]["uniform_tree1000"] = isomorphism_benchmark(rng, uniform_tree, 100; n=100)
+
+    nautygraphs["isomorphism"]["grid5"], graphs["isomorphism"]["grid5"] = isomorphism_benchmark(rng, grid, [5, 5]; n=100, random_gen=false)
+    nautygraphs["isomorphism"]["grid10"], graphs["isomorphism"]["grid10"] = isomorphism_benchmark(rng, grid, [10, 10]; n=100, random_gen=false)
+    nautygraphs["isomorphism"]["grid20"], graphs["isomorphism"]["grid20"] = isomorphism_benchmark(rng, grid, [20, 20]; n=100, random_gen=false)
 end
 
 begin # EVAL
