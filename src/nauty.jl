@@ -63,9 +63,9 @@ end
 
 
 """
-    nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) where {T}
+    nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...)
 
-TBW
+Compute a graph g's automorphism group and its canonical form.
 """
 function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) # TODO: allow nautyoptions to be overwritten
     n, m = g.n_vertices, g.n_words
@@ -117,6 +117,13 @@ function _nautyhash(g::AbstractNautyGraph)
     return grpsize, canong, canon_perm, hashval
 end
 
+
+
+"""
+    canonize!(g::AbstractNautyGraph)
+
+Reorder g's vertices to be in canonical order. Returns the permutation used to canonize g and the automorphism group size.
+"""
 function canonize!(g::AbstractNautyGraph)
     grpsize, canong, canon_perm, hashval = _nautyhash(g)
 
@@ -137,5 +144,11 @@ function Base.hash(g::AbstractNautyGraph)
     return g.hashval
 end
 
+
+"""
+    is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph)
+
+Check whether two graphs g and h are isomorphic to each other by comparing the hashes of their canonical forms.
+"""
 is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph) = hash(g) == hash(h)
 ≃(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)
