@@ -99,6 +99,7 @@ function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=fal
         @warn "automorphism group size overflow"
         grpsize = 0
     end
+    
     # autmorph = AutomorphismGroup{T}(grpsize, orbits, stats.numgenerators) # TODO: summarize useful automorphism group info
 
     if canonical_form
