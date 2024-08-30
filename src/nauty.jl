@@ -61,7 +61,13 @@ end
 #     # ... 
 # end
 
-function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) where {T} # TODO: allow nautyoptions to be overwritten
+
+"""
+    nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) where {T}
+
+TBW
+"""
+function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) # TODO: allow nautyoptions to be overwritten
     n, m = g.n_vertices, g.n_words
 
     options = NautyOptions() # TODO: allocate default options outside and make sure they do not interfere with multithreading
@@ -87,11 +93,11 @@ function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex
         h::Ref{WordType})::Cvoid
 
     # TODO: clean this up
-    if stats.grpsize1 * 10^stats.grpsize2 < typemax(T)
-        grpsize = round(T, stats.grpsize1 * 10^stats.grpsize2)
+    if stats.grpsize1 * 10^stats.grpsize2 < typemax(Int)
+        grpsize = round(Int, stats.grpsize1 * 10^stats.grpsize2)
     else
         @warn "automorphism group size overflow"
-        grpsize = zero(T)
+        grpsize = 0
     end
     # autmorph = AutomorphismGroup{T}(grpsize, orbits, stats.numgenerators) # TODO: summarize useful automorphism group info
 
@@ -104,7 +110,6 @@ function nauty(::Type{T}, g::DenseNautyGraph, canonical_form=true; ignore_vertex
     end
     return grpsize, canong, canon_perm
 end
-nauty(g::DenseNautyGraph, canonical_form=true; kwargs...) = nauty(Int, g, canonical_form; kwargs...)
 
 function _nautyhash(g::AbstractNautyGraph)
     grpsize, canong, canon_perm = nauty(g, true)
