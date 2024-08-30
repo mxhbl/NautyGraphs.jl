@@ -1,8 +1,8 @@
 using NautyGraphs, Graphs
 using Test
-using Random
+using Random, LinearAlgebra
 
-@testset "NautyGraphs" begin
+@testset verbose=true "NautyGraphs" begin
     include("densenautygraphs.jl")
     include("nauty.jl")
 end
