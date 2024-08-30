@@ -249,7 +249,7 @@ begin # ISOMORPHISM
 
     nautygraphs["isomorphism"]["uniform_tree10"], graphs["isomorphism"]["uniform_tree10"] = isomorphism_benchmark(rng, uniform_tree, 10; n=100)
     nautygraphs["isomorphism"]["uniform_tree100"], graphs["isomorphism"]["uniform_tree100"] = isomorphism_benchmark(rng, uniform_tree, 100; n=100)
-    nautygraphs["isomorphism"]["uniform_tree1000"], graphs["isomorphism"]["uniform_tree1000"] = isomorphism_benchmark(rng, uniform_tree, 100; n=100)
+    nautygraphs["isomorphism"]["uniform_tree1000"], graphs["isomorphism"]["uniform_tree1000"] = isomorphism_benchmark(rng, uniform_tree, 1000; n=100)
 
     nautygraphs["isomorphism"]["grid5"], graphs["isomorphism"]["grid5"] = isomorphism_benchmark(rng, grid, [5, 5]; n=100, random_gen=false)
     nautygraphs["isomorphism"]["grid10"], graphs["isomorphism"]["grid10"] = isomorphism_benchmark(rng, grid, [10, 10]; n=100, random_gen=false)
