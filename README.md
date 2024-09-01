@@ -9,6 +9,7 @@ NautyGraphs.jl is a Julia interface to [_nauty_](https://pallini.di.uniroma1.it/
 ## Installation
 To install NautyGraphs.jl from the Julia REPL, enter `]` to enter Pkg mode, and then run
 ```
+pkg> add https://github.com/mxhbl/nautygraphs_jll.jl
 pkg> add https://github.com/mxhbl/NautyGraphs.jl
 ```
 ## Basic Usage

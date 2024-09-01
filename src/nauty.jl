@@ -81,7 +81,7 @@ function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=fal
     orbits = zeros(Cint, n)
     h = zero(g.graphset)
 
-    @ccall nauty_lib.densenauty_wrap(
+    @ccall libnautygraphs.densenauty_wrap(
         g.graphset::Ref{WordType},
         lab::Ref{Cint},
         ptn::Ref{Cint},
