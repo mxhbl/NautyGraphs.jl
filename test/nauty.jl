@@ -16,6 +16,7 @@
     add_edge!(h1, 4, 2)
 
     @test g1 ≃ h1
+    @test ghash(g1) == ghash(h1)
 
     g2 = NautyGraph(4, [0, 0, 1, 1])
     add_edge!(g2, 1, 2)
@@ -28,6 +29,8 @@
     add_edge!(h2, 4, 2)
 
     @test g2 ≃ h2
+    @test ghash(g2) == ghash(h2)
+
 
     k2 = NautyGraph(4, [1, 0, 0, 1])
     add_edge!(k2, 3, 4)
@@ -35,6 +38,7 @@
     add_edge!(k2, 4, 2)
 
     @test !(g2 ≃ k2)
+    @test ghash(g2) != ghash(k2)
 
 
     g3 = NautyGraph(6)
@@ -48,6 +52,7 @@
     canonize!(h3)
 
     @test g3 ≃ h3
+    @test ghash(g3) == ghash(h3)
 
     k3 = NautyGraph(6)
     add_edge!(k3, 6, 2)
@@ -57,6 +62,7 @@
     add_edge!(k3, 6, 4)
 
     @test k3 ≃ g3
+    @test ghash(k3) == ghash(g3)
 
     m3 = copy(k3)
     canonize!(m3)

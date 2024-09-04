@@ -7,9 +7,9 @@
 NautyGraphs.jl is a Julia interface to [_nauty_](https://pallini.di.uniroma1.it/) by Brendan McKay. It allows for efficient isomorphism checking, canonical labeling, and hashing of vertex-labeled graphs. In addition, NautyGraphs.jl is fully compatible with the [Graphs.jl](https://github.com/JuliaGraphs/Graphs.jl) API. This makes it easy to create or modify graphs through familiar syntax, and allows NautyGraphs to work with a large library of graph algorithms.
 **Warning**: NautyGraph.jl currently does not work on Windows. This will hopefully be fixed soon.
 ## Installation
-To install NautyGraphs.jl from the Julia REPL, enter `]` to enter Pkg mode, and then run
+To install NautyGraphs.jl from the Julia REPL, press `]` to enter Pkg mode, and then run
 ```
-pkg> add https://github.com/mxhbl/NautyGraphs.jl
+pkg> add NautyGraphs
 ```
 ## Basic Usage
 NautyGraphs.jl defines the `NautyGraph` or `NautyDiGraph` graph formats, which can be constructed and modified in the same way as regular `Graphs` from Graphs.jl:
@@ -47,11 +47,16 @@ julia> canonize!(h)
 julia> adjacency_matrix(g) == adjacency_matrix(h)
 true
 ```
-Isomorphisms are computed by comparing hashes. `hash(g)` computes the canonical representative of a graph's isomorphism class and then hashes the canonical adjacency matrix and vertex labels.
+Isomorphisms can also be computed by comparing hashes. `ghash(g)` computes the canonical representative of a graph's isomorphism class and then hashes the canonical adjacency matrix and vertex labels.
 ```
-julia> hash(g)
+julia> ghash(g)
 0x3127d9b726f2c846
-julia> hash(h)
+julia> ghash(h)
 0x3127d9b726f2c846
 ```
-Using hashes makes it possible to quickly compare large numbers of graphs for isomorphism. Simply compute all graph hashes and filter out the duplicates!
+Graph hashes make it possible to quickly compare large numbers of graphs for isomorphism. Simply compute all hashes and filter out the duplicates!
+
+## See also
+- [_nauty_ & _traces_]((https://pallini.di.uniroma1.it/)) 
+- [Nauty.jl](https://github.com/bovine3dom/Nauty.jl)
+- [Graphs.jl](https://github.com/JuliaGraphs/Graphs.jl)

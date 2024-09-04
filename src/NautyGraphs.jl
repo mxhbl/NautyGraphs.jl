@@ -24,5 +24,6 @@ export
     nauty,
     canonize!,
     is_isomorphic,
-    ≃
+    ≃,
+    ghash
 end
