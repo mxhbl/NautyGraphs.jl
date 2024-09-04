@@ -71,17 +71,19 @@ function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=fal
     n, m = g.n_vertices, g.n_words
 
     options = NautyOptions() # TODO: allocate default options outside and make sure they do not interfere with multithreading
+    options.dispatch = cglobal((:dispatch_graph, libnauty), Cvoid)
     options.getcanon = canonical_form
     options.digraph = is_directed(g)
     options.defaultptn = all(iszero, g.labels) || ignore_vertex_labels # TODO: check more carefully if lab/ptn is valid
-    lab, ptn = _vertexlabels_to_labptn(g.labels)
 
     stats = NautyStatistics()
+
+    lab, ptn = _vertexlabels_to_labptn(g.labels)
 
     orbits = zeros(Cint, n)
     h = zero(g.graphset)
 
-    @ccall libnautygraphs.densenauty_wrap(
+    @ccall libnauty.densenauty(
         g.graphset::Ref{WordType},
         lab::Ref{Cint},
         ptn::Ref{Cint},
@@ -112,12 +114,11 @@ function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=fal
     return grpsize, canong, canon_perm
 end
 
-function _nautyhash(g::AbstractNautyGraph)
+function _nautyhash(g::AbstractNautyGraph, h::UInt=zero(UInt))
     grpsize, canong, canon_perm = nauty(g, true)
-    hashval = hash(view(g.labels, canon_perm), hash(canong))
+    hashval = hash(view(g.labels, canon_perm), hash(canong, h))
     return grpsize, canong, canon_perm, hashval
 end
-
 
 
 """
@@ -134,22 +135,28 @@ function canonize!(g::AbstractNautyGraph)
     return canon_perm, grpsize
 end
 
-function Base.hash(g::AbstractNautyGraph)
+"""
+    is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph)
+
+Check whether two graphs g and h are isomorphic to each other by comparing their canonical forms.
+"""
+function is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph)
+    _, canong, permg = nauty(g, true)
+    _, canonh, permh = nauty(h, true)
+    return canong == canonh && view(g.labels, permg) == view(h.labels, permh)
+end
+≃(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)
+
+# TODO: decide whether is_equal should test for isomorphism or not
+Base.isequal(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)
+
+function Base.hash(g::AbstractNautyGraph, h::UInt)
     if !isnothing(g.hashval)
         return g.hashval
     end
 
-    # TODO: error checking and so on
-    _, _, _, hashval = _nautyhash(g)
+    _, _, _, hashval = _nautyhash(g, h)
     g.hashval = hashval
     return g.hashval
 end
 
-
-"""
-    is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph)
-
-Check whether two graphs g and h are isomorphic to each other by comparing the hashes of their canonical forms.
-"""
-is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph) = hash(g) == hash(h)
-≃(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)
