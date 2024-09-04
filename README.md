@@ -57,6 +57,6 @@ julia> ghash(h)
 Graph hashes make it possible to quickly compare large numbers of graphs for isomorphism. Simply compute all hashes and filter out the duplicates!
 
 ## See also
-- [_nauty_ & _traces_]((https://pallini.di.uniroma1.it/)) 
+- [_nauty_ & _traces_](https://pallini.di.uniroma1.it/)
 - [Nauty.jl](https://github.com/bovine3dom/Nauty.jl)
 - [Graphs.jl](https://github.com/JuliaGraphs/Graphs.jl)
