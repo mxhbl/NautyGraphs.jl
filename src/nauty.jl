@@ -147,10 +147,7 @@ function is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph)
 end
 ≃(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)
 
-# TODO: decide whether is_equal should test for isomorphism or not
-Base.isequal(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)
-
-function Base.hash(g::AbstractNautyGraph, h::UInt)
+function ghash(g::AbstractNautyGraph, h::UInt=zero(UInt))
     if !isnothing(g.hashval)
         return g.hashval
     end
