@@ -67,4 +67,17 @@
     m3 = copy(k3)
     canonize!(m3)
     @test adjacency_matrix(m3) == adjacency_matrix(h3)
+
+
+    g4 = NautyGraph(3, [1, 2, 3])
+    h4 = NautyGraph(3, [1, 2, 3])
+    add_edge!(g4, 1, 2)
+    add_edge!(h4, 1, 2)
+
+    @test g4 == h4
+    @test Base.hash(g4) == Base.hash(h4)
+
+    g4.hashval = UInt(0)
+    @test g4 == h4
+    @test Base.hash(g4) == Base.hash(h4)
 end

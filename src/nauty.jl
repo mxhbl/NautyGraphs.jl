@@ -147,6 +147,13 @@ function is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph)
 end
 ≃(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)
 
+
+
+"""
+    ghash(g::AbstractNautyGraph, h::UInt=zero(UInt))
+
+Hash the canonical version of g, so that (up to hash collisions) `ghash(g1) == ghash(g2)` implies `is_isomorphic(g1, g2) == true`.
+"""
 function ghash(g::AbstractNautyGraph, h::UInt=zero(UInt))
     if !isnothing(g.hashval)
         return g.hashval
@@ -157,3 +164,6 @@ function ghash(g::AbstractNautyGraph, h::UInt=zero(UInt))
     return g.hashval
 end
 
+# TODO: decide what the default equality comparision should be
+Base.hash(g::DenseNautyGraph, h::UInt) = hash(g.labels, hash(g.graphset, h))
+Base.:(==)(g::DenseNautyGraph, h::DenseNautyGraph) = (g.graphset == h.graphset) && (g.labels == h.labels)
