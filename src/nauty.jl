@@ -74,7 +74,7 @@ function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=fal
     options.dispatch = cglobal((:dispatch_graph, libnauty), Cvoid)
     options.getcanon = canonical_form
     options.digraph = is_directed(g)
-    options.defaultptn = all(iszero, g.labels) || ignore_vertex_labels # TODO: check more carefully if lab/ptn is valid
+    options.defaultptn = ignore_vertex_labels || all(iszero, g.labels) # TODO: check more carefully if lab/ptn is valid
 
     stats = NautyStatistics()
 
