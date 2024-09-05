@@ -59,4 +59,5 @@ Graph hashes make it possible to quickly compare large numbers of graphs for iso
 ## See also
 - [_nauty_ & _traces_](https://pallini.di.uniroma1.it/)
 - [Nauty.jl](https://github.com/bovine3dom/Nauty.jl)
+- [NautyTraces.jl](https://github.com/laurentbartholdi/NautyTraces.jl)
 - [Graphs.jl](https://github.com/JuliaGraphs/Graphs.jl)
