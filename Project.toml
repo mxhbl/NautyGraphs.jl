@@ -1,7 +1,7 @@
 name = "NautyGraphs"
 uuid = "7509a0a4-015a-4167-b44b-0799a1a2605e"
 authors = ["Maximilian HUEBL <maximilian.huebl@ist.ac.at>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
