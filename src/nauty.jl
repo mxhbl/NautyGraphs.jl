@@ -117,6 +117,7 @@ end
 function _nautyhash(g::AbstractNautyGraph, h::UInt=zero(UInt))
     grpsize, canong, canon_perm = nauty(g, true)
     hashval = hash(view(g.labels, canon_perm), hash(canong, h))
+    g.hashval = hashval
     return grpsize, canong, canon_perm, hashval
 end
 
@@ -128,10 +129,8 @@ Reorder g's vertices to be in canonical order. Returns the permutation used to c
 """
 function canonize!(g::AbstractNautyGraph)
     grpsize, canong, canon_perm, hashval = _nautyhash(g)
-
-    g.graphset .= canong
-    g.labels .= g.labels[canon_perm]
-    g.hashval = hashval
+    copyto!(g.graphset, canong)
+    permute!(g.labels, canon_perm)
     return canon_perm, grpsize
 end
 
