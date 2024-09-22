@@ -114,9 +114,15 @@ function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=fal
     return grpsize, canong, canon_perm
 end
 
-function _nautyhash(g::AbstractNautyGraph, h::UInt=zero(UInt))
+function _nautyhash(g::DenseNautyGraph)
     grpsize, canong, canon_perm = nauty(g, true)
-    hashval = hash(view(g.labels, canon_perm), hash(canong, h))
+
+    # Base.hash skips elements in arrays of length >= 8192
+    # Use SHA in these cases
+    canong_hash = length(canong) >= 8192 ? hash_sha(canong) : hash(canong)
+    labels_hash = @views length(g.labels) >= 8192 ? hash_sha(g.labels[canon_perm]) : hash(g.labels[canon_perm])
+
+    hashval = hash(labels_hash, canong_hash)
     g.hashval = hashval
     return grpsize, canong, canon_perm, hashval
 end
@@ -153,12 +159,12 @@ end
 
 Hash the canonical version of g, so that (up to hash collisions) `ghash(g1) == ghash(g2)` implies `is_isomorphic(g1, g2) == true`.
 """
-function ghash(g::AbstractNautyGraph, h::UInt=zero(UInt))
+function ghash(g::AbstractNautyGraph)
     if !isnothing(g.hashval)
         return g.hashval
     end
 
-    _, _, _, hashval = _nautyhash(g, h)
+    _, _, _, hashval = _nautyhash(g)
     g.hashval = hashval
     return g.hashval
 end
