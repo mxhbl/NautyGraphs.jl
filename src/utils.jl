@@ -85,3 +85,9 @@ function _modify_edge!(g::AbstractNautyGraph, e::Edge, add::Bool)
 
     return g.graphset[set_idx] != word_old
 end
+
+function hash_sha(x)
+    io = IOBuffer()
+    write(io, x)
+    return _concatbytes(sha256(take!(io))[1:8])
+end

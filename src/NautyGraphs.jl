@@ -1,6 +1,7 @@
 module NautyGraphs
 
 import nauty_jll
+using SHA
 const libnauty = nauty_jll.libnautyTL
 const WORDSIZE = 64
 const WordType = Culong

@@ -115,6 +115,16 @@ function set_to_idxs!(set::AbstractVector{WordType}, idxs::AbstractVector{<:Inte
     return nidx
 end
 
+function _concatbytes(bytes::AbstractVector{<:UInt8})
+    @assert length(bytes) == sizeof(HashType)
+    w = HashType(0)
+    for b in bytes
+        w |= b
+        w <<= 8
+    end
+    return w
+end
+
 function _to_matrixidx(idx::Integer, m::Integer)
     return 1 + (idx - 1) ÷ m, mod1(idx, m)
 end
