@@ -36,6 +36,7 @@ mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
 end
 
 function DenseNautyGraph{D}(n::Integer, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {D}
+    !isnothing(vertex_labels) && @assert n == length(vertex_labels)
     m = ceil(Cint, n / WORDSIZE)
     graphset = zeros(WordType, Int(n * m))
     labels = _initialize_vertexlabels(n, vertex_labels)
