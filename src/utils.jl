@@ -66,8 +66,11 @@ end
 
 function _modify_edge!(g::AbstractNautyGraph, e::Edge, add::Bool)
     # Adds or removes the edge e
-    _, m = g.n_vertices, g.n_words
+    n, m = g.n_vertices, g.n_words
     i, j = e.src, e.dst
+    if i > n || j > n
+        return false
+    end
 
     set_idx = 1 + (i - 1) * m + (j - 1) ÷ WORDSIZE
     # left = 1000000000.... 

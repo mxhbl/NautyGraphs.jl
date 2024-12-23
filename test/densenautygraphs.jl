@@ -74,6 +74,12 @@ end
     add_edge!(g, 2, 3)
     add_edge!(g, 2, 4)
 
+    g2 = copy(g)
+    g3 = copy(g)
+
+    @test add_edge!(g2, 2, 5) == false
+    @test g2 == g3
+
     @test outneighbors(g, 2) == [3, 4]
     @test outneighbors(g, 1) == [2]
 
