@@ -124,8 +124,6 @@ function _nautyhash(g::DenseNautyGraph)
 
     hashval = hash(labels_hash, canong_hash)
 
-    # I think these are unnecessary here since they are assigned in their
-    # respective functions
     g.hashval = hashval
     g.orbits = orbits
 
@@ -171,15 +169,17 @@ function ghash(g::AbstractNautyGraph)
     end
 
     _, _, _, hashval, _ = _nautyhash(g)
+
+    # I think this is not useful here since it is part of the _nautyhash function
     g.hashval = hashval
+    
     return g.hashval
 end
 
 """
     orbit(g::AbstractNautyGraph)
 
-Hash the canonical version of g, so that (up to hash collisions) `ghash(g1) == ghash(g2)` implies `is_isomorphic(g1, g2) == true`.
-Hashes are computed using `Base.hash` for small graphs (nv < 8192), or using the first 64 bits of `sha256` for larger graphs.
+Find the orbits of g based on its automorphism group. 
 """
 function orbits(g::AbstractNautyGraph)
     if !isnothing(g.orbits)
@@ -187,7 +187,10 @@ function orbits(g::AbstractNautyGraph)
     end
 
     _, _, _, _, orbits = _nautyhash(g)
+
+    # I think this is not useful here since it is part of the _nautyhash function
     g.orbits = orbits
+    
     return g.orbits
 end
 

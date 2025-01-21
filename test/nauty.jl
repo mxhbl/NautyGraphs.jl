@@ -17,6 +17,7 @@
 
     @test g1 ≃ h1
     @test ghash(g1) == ghash(h1)
+    @test orbits(g1) != orbits(h1)
 
     g2 = NautyGraph(4, [0, 0, 1, 1])
     add_edge!(g2, 1, 2)
@@ -30,6 +31,7 @@
 
     @test g2 ≃ h2
     @test ghash(g2) == ghash(h2)
+    @test orbits(g2) != orbits(h2)
 
 
     k2 = NautyGraph(4, [1, 0, 0, 1])
@@ -39,6 +41,7 @@
 
     @test !(g2 ≃ k2)
     @test ghash(g2) != ghash(k2)
+    @test orbits(g2) != orbits(k2)
 
 
     g3 = NautyGraph(6)
@@ -53,6 +56,7 @@
 
     @test g3 ≃ h3
     @test ghash(g3) == ghash(h3)
+    @test orbits(g3) == orbits(h3)
 
     k3 = NautyGraph(6)
     add_edge!(k3, 6, 2)
@@ -63,6 +67,7 @@
 
     @test k3 ≃ g3
     @test ghash(k3) == ghash(g3)
+    @test orbits(k3) != orbits(g3)
 
     m3 = copy(k3)
     canonize!(m3)
