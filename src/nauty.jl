@@ -111,11 +111,11 @@ function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=fal
         canong = nothing
         canon_perm = nothing
     end
-    return grpsize, canong, canon_perm
+    return grpsize, canong, canon_perm, orbits
 end
 
 function _nautyhash(g::DenseNautyGraph)
-    grpsize, canong, canon_perm = nauty(g, true)
+    grpsize, canong, canon_perm, orbits = nauty(g, true)
 
     # Base.hash skips elements in arrays of length >= 8192
     # Use SHA in these cases
@@ -123,8 +123,11 @@ function _nautyhash(g::DenseNautyGraph)
     labels_hash = @views length(g.labels) >= 8192 ? hash_sha(g.labels[canon_perm]) : hash(g.labels[canon_perm])
 
     hashval = hash(labels_hash, canong_hash)
+
     g.hashval = hashval
-    return grpsize, canong, canon_perm, hashval
+    g.orbits = orbits
+
+    return grpsize, canong, canon_perm, hashval, orbits
 end
 
 
@@ -134,7 +137,7 @@ end
 Reorder g's vertices to be in canonical order. Returns the permutation used to canonize g and the automorphism group size.
 """
 function canonize!(g::AbstractNautyGraph)
-    grpsize, canong, canon_perm, hashval = _nautyhash(g)
+    grpsize, canong, canon_perm, hashval, orbits = _nautyhash(g)
     copyto!(g.graphset, canong)
     permute!(g.labels, canon_perm)
     return canon_perm, grpsize
@@ -165,9 +168,30 @@ function ghash(g::AbstractNautyGraph)
         return g.hashval
     end
 
-    _, _, _, hashval = _nautyhash(g)
+    _, _, _, hashval, _ = _nautyhash(g)
+
+    # I think this is not useful here since it is part of the _nautyhash function
     g.hashval = hashval
+    
     return g.hashval
+end
+
+"""
+    orbit(g::AbstractNautyGraph)
+
+Find the orbits of g based on its automorphism group. 
+"""
+function orbits(g::AbstractNautyGraph)
+    if !isnothing(g.orbits)
+        return g.orbits
+    end
+
+    _, _, _, _, orbits = _nautyhash(g)
+
+    # I think this is not useful here since it is part of the _nautyhash function
+    g.orbits = orbits
+    
+    return g.orbits
 end
 
 # TODO: decide what the default equality comparision should be

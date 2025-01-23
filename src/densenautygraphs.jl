@@ -11,6 +11,7 @@ mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
     n_words::Cint
     labels::Vector{Cint}
     hashval::Union{HashType,Nothing}
+    orbits::Union{Vector{Cint}, Nothing}
 
     function DenseNautyGraph(graphset, labels, directed::Bool)
         n_vertices = length(labels)
@@ -28,10 +29,10 @@ mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
         if !directed
             n_edges ÷= 2
         end
-        return new{directed}(graphset, n_vertices, n_edges, n_words, labels, nothing)
+        return new{directed}(graphset, n_vertices, n_edges, n_words, labels, nothing, nothing)
     end
-    function DenseNautyGraph{D}(graphset, n_vertices, n_edges, n_words, labels, hashval) where {D}
-        return new{D}(graphset, n_vertices, n_edges, n_words, labels, hashval)
+    function DenseNautyGraph{D}(graphset, n_vertices, n_edges, n_words, labels, hashval, orbits) where {D}
+        return new{D}(graphset, n_vertices, n_edges, n_words, labels, hashval, orbits)
     end
 end
 
@@ -62,10 +63,16 @@ end
 
 (::Type{G})(g::AbstractGraph, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {G<:AbstractNautyGraph} = G(adjacency_matrix(g), vertex_labels)
 
-Base.copy(g::G) where {G<:DenseNautyGraph} = G(copy(g.graphset), g.n_vertices, g.n_edges, g.n_words, copy(g.labels), g.hashval)
+Base.copy(g::G) where {G<:DenseNautyGraph} = G(copy(g.graphset), g.n_vertices, g.n_edges, g.n_words, copy(g.labels), g.hashval, isnothing(g.orbits) ? g.orbits : copy(g.orbits))
+
 function Base.copy!(dest::G, src::G) where {G<:DenseNautyGraph}
     copy!(dest.graphset, src.graphset)
     copy!(dest.labels, src.labels)
+    if !isnothing(src.orbits)
+        copy!(dest.orbits, src.orbits)
+    else
+        dest.orbits = src.orbits
+    end
     dest.n_vertices = src.n_vertices
     dest.n_edges = src.n_edges
     dest.n_words = src.n_words

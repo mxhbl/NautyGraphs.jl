@@ -26,5 +26,6 @@ export
     canonize!,
     is_isomorphic,
     ≃,
-    ghash
+    ghash,
+    orbits
 end
