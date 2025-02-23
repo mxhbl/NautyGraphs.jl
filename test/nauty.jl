@@ -1,3 +1,5 @@
+using Base.Threads
+
 @testset "nauty" begin
     overflow_g = NautyGraph(50)
 
@@ -80,4 +82,11 @@
     g4.hashval = UInt(0)
     @test g4 == h4
     @test Base.hash(g4) == Base.hash(h4)
+
+    thread_gs = fill(copy(g4), 10)
+    vals = []
+    @threads for i in eachindex(thread_gs)
+        push!(vals, nauty(thread_gs[i]))
+    end
+    @test length(vals) == length(thread_gs)
 end
