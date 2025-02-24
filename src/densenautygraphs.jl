@@ -57,7 +57,14 @@ function DenseNautyGraph{D}(adjmx::AbstractMatrix, vertex_labels::Union{Vector{<
     return DenseNautyGraph(graphset, labels, D)
 end
 
-(::Type{G})(g::AbstractGraph, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {G<:AbstractNautyGraph} = G(adjacency_matrix(g), vertex_labels)
+function (::Type{G})(g::AbstractGraph, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {G<:AbstractNautyGraph}
+    ng = G(nv(g), vertex_labels)
+
+    for e in edges(g)
+        add_edge!(ng, e)
+    end
+    return ng
+end 
 
 Base.copy(g::G) where {G<:DenseNautyGraph} = G(copy(g.graphset), g.n_vertices, g.n_edges, g.n_words, copy(g.labels), g.hashval)
 function Base.copy!(dest::G, src::G) where {G<:DenseNautyGraph}

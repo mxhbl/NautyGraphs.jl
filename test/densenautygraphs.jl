@@ -55,12 +55,16 @@ end
     @test nv(empty_g) == 0
     @test ne(empty_g) == 0
     
-    rand_g = NautyGraph(erdos_renyi(70, 100; rng=rng))
+    g0 = erdos_renyi(70, 100; rng=rng)
+    rand_g = NautyGraph(g0)
     @test nv(rand_g) == 70
     @test ne(rand_g) == 100
     @test vertices(rand_g) == Base.OneTo(70)
 
     for edge in edges(rand_g)
+        @test has_edge(rand_g, edge)
+    end
+    for edge in edges(g0)
         @test has_edge(rand_g, edge)
     end
     for vertex in vertices(rand_g)
