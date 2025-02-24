@@ -1,6 +1,3 @@
-using Graphs
-using SparseArrays, LinearAlgebra
-
 abstract type AbstractNautyGraph <: AbstractGraph{Cint} end
 # TODO: abstract type AbstractSparseNautyGraph <: AbstractNautyGraph end
 
@@ -43,15 +40,12 @@ function DenseNautyGraph{D}(n::Integer, vertex_labels::Union{Vector{<:Integer},N
     return DenseNautyGraph(graphset, labels, D)
 end
 function DenseNautyGraph{D}(adjmx::AbstractMatrix, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {D}
-    n, _n = size(adjmx)
-
-    # Self loops are not allowed
-    @assert all(iszero, diag(adjmx))
+    n, n2 = size(adjmx)
 
     if !D
-        @assert adjmx == adjmx'
+        @assert issymmetric(adjmx)
     else
-        @assert n == _n
+        @assert n == n2
     end
     
     graphset = _adjmatrix_to_graphset(adjmx)
@@ -60,7 +54,18 @@ function DenseNautyGraph{D}(adjmx::AbstractMatrix, vertex_labels::Union{Vector{<
     return DenseNautyGraph(graphset, labels, D)
 end
 
-(::Type{G})(g::AbstractGraph, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {G<:AbstractNautyGraph} = G(adjacency_matrix(g), vertex_labels)
+function (::Type{G})(g::AbstractGraph, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {G<:AbstractNautyGraph}
+    if is_directed(g) != is_directed(G)
+        error("Cannot create an undirected NautyGraph from a directed graph (or vice versa). Please make sure the directedness of the graph types is matching.")
+    end
+
+    ng = G(nv(g), vertex_labels)
+
+    for e in edges(g)
+        add_edge!(ng, e)
+    end
+    return ng
+end
 
 Base.copy(g::G) where {G<:DenseNautyGraph} = G(copy(g.graphset), g.n_vertices, g.n_edges, g.n_words, copy(g.labels), g.hashval)
 function Base.copy!(dest::G, src::G) where {G<:DenseNautyGraph}
@@ -75,6 +80,9 @@ end
 
 Base.show(io::Core.IO, g::DenseNautyGraph{false}) = print(io, "{$(nv(g)), $(ne(g))} undirected NautyGraph")
 Base.show(io::Core.IO, g::DenseNautyGraph{true}) = print(io, "{$(nv(g)), $(ne(g))} directed NautyGraph")
+
+Base.hash(g::DenseNautyGraph, h::UInt) = hash(g.labels, hash(g.graphset, h))
+Base.:(==)(g::DenseNautyGraph, h::DenseNautyGraph) = (g.graphset == h.graphset) && (g.labels == h.labels)
 
 begin # BASIC GRAPH API
     labels(g::AbstractNautyGraph) = g.labels
@@ -145,19 +153,6 @@ begin # BASIC GRAPH API
     Base.eltype(::AbstractNautyGraph) = Cint
     Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
     Base.zero(::Type{G}) where {G<:AbstractNautyGraph} = G(0)
-
-    function Graphs.adjacency_matrix(g::DenseNautyGraph, T::DataType=Int; dir::Symbol=:out)
-        n = nv(g)
-    
-        es = _directed_edges(g)
-        k = length(es)
-        is, js, vals = zeros(T, k), zeros(T, k), ones(T, k)
-        for (i, e) in enumerate(es)
-            is[i] = e.src
-            js[i] = e.dst
-        end
-        return sparse(is, js, vals, n, n)
-    end
 end
 
 begin # GRAPH MODIFY METHODS
@@ -171,8 +166,13 @@ begin # GRAPH MODIFY METHODS
     end
     function Graphs.add_edge!(g::DenseNautyGraph{false}, e::Edge)
         fwd_edge_added = _modify_edge!(g, e, true)
-        bwd_edge_added = _modify_edge!(g, reverse(e), true)
-        edge_added = fwd_edge_added && bwd_edge_added
+
+        if e.src != e.dst
+            bwd_edge_added = _modify_edge!(g, reverse(e), true)
+            edge_added = fwd_edge_added && bwd_edge_added
+        else
+            edge_added = fwd_edge_added
+        end
 
         if edge_added
             g.n_edges += 1
@@ -311,8 +311,14 @@ function Graphs.blockdiag(g::G, h::G) where {G<:DenseNautyGraph}
     k.n_edges = g.n_edges + h.n_edges
     return k
 end
+
+"""
+    blockdiag!(g::G, h::G) where {G<:DenseNautyGraph}
+
+Compute `blockdiag(g, h)` and store it in `g`, whose size is increased to accomodate it.
+"""
 function blockdiag!(g::G, h::G) where {G<:DenseNautyGraph}
-    @assert g !== h # Make sure g and h are different objects (TODO: could be lifted)
+    @assert g !== h # Make sure g and h don't alias the same memory.
 
     for i in vertices(h)
         add_vertex!(g, h.labels[i])

@@ -48,6 +48,37 @@ symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1
         add_edge!(ng, 1, 2)
         @test adjacency_matrix(g) == adjacency_matrix(ng)
     end
+
+    g_loop = Graph(2)
+    ng_loop = NautyGraph(2)
+
+    add_edge!(g_loop, 1, 1)
+    add_edge!(ng_loop, 1, 1)
+    @test ne(ng_loop) == ne(g_loop)
+
+    @test adjacency_matrix(ng_loop) == adjacency_matrix(g_loop)
+
+    add_edge!(g_loop, 1, 2)
+    add_edge!(ng_loop, 1, 2)
+    @test ne(ng_loop) == ne(g_loop)
+
+    g_diloop = DiGraph(2)
+    ng_diloop = NautyDiGraph(2)
+    add_edge!(g_diloop, 1, 1)
+    add_edge!(ng_diloop, 1, 1)
+    @test ne(ng_diloop) == ne(g_diloop)
+
+    @test adjacency_matrix(ng_diloop) == adjacency_matrix(g_diloop)
+
+    add_edge!(g_diloop, 1, 1)
+    @test add_edge!(ng_diloop, 1, 1) == false
+    @test ne(ng_diloop) == ne(g_diloop)
+
+    @test adjacency_matrix(ng_diloop) == adjacency_matrix(g_diloop)
+
+    add_edge!(g_diloop, 1, 2)
+    add_edge!(ng_diloop, 1, 2)
+    @test ne(ng_diloop) == ne(g_diloop)
 end
 
 @testset "methods" begin
@@ -55,12 +86,18 @@ end
     @test nv(empty_g) == 0
     @test ne(empty_g) == 0
     
-    rand_g = NautyGraph(erdos_renyi(70, 100; rng=rng))
+    g0 = erdos_renyi(70, 100; rng=rng)
+    rand_g = NautyGraph(g0)
+    @test_throws ErrorException (rand_g_dir = NautyDiGraph(g0))
+
     @test nv(rand_g) == 70
     @test ne(rand_g) == 100
     @test vertices(rand_g) == Base.OneTo(70)
 
     for edge in edges(rand_g)
+        @test has_edge(rand_g, edge)
+    end
+    for edge in edges(g0)
         @test has_edge(rand_g, edge)
     end
     for vertex in vertices(rand_g)

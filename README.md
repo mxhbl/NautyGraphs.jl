@@ -5,7 +5,7 @@
 [![Coverage](https://codecov.io/gh/mxhbl/NautyGraphs.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/mxhbl/NautyGraphs.jl)
 
 NautyGraphs.jl is a Julia interface to [_nauty_](https://pallini.di.uniroma1.it/) by Brendan McKay. It allows for efficient isomorphism checking, canonical labeling, and hashing of vertex-labeled graphs. In addition, NautyGraphs.jl is fully compatible with the [Graphs.jl](https://github.com/JuliaGraphs/Graphs.jl) API. This makes it easy to create or modify graphs through familiar syntax, and allows NautyGraphs to work with a large library of graph algorithms.
-**Warning**: NautyGraph.jl currently does not work on Windows. This will hopefully be fixed soon.
+**Warning**: NautyGraph.jl currently does not work on Windows.
 ## Installation
 To install NautyGraphs.jl from the Julia REPL, press `]` to enter Pkg mode, and then run
 ```
@@ -36,13 +36,13 @@ true
 julia> adjacency_matrix(g) == adjacency_matrix(h)
 false
 ```
-Use `canonize!(g)` to reorder `g` into canonical order. `canonize!(g)` also returns the permutation needed to canonize `g`, as well as the size of its automorphism group:
+Use `canonize!(g)` to reorder `g` into canonical order. `canonize!(g)` also returns the permutation needed to canonize `g`:
 ```
 julia> canonize!(g)
-([1, 3, 4, 2], 2)
+[1, 3, 4, 2]
 
 julia> canonize!(h)
-([2, 1, 3, 4], 2)
+[2, 1, 3, 4]
 
 julia> adjacency_matrix(g) == adjacency_matrix(h)
 true
@@ -55,6 +55,9 @@ julia> ghash(h)
 0x3127d9b726f2c846
 ```
 Graph hashes make it possible to quickly compare large numbers of graphs for isomorphism. Simply compute all hashes and filter out the duplicates!
+
+To obtain information about a graph's automorphism group, use `nauty(g)`. This will return the canonical permutation as well as an `AutomorphismGroup` object.
+Right now, the recorded properties of the automorphism group are very limited and only include the group size and orbits, but this will change in the future.
 
 ## See also
 - [_nauty_ & _traces_](https://pallini.di.uniroma1.it/)
