@@ -37,9 +37,4 @@ export
     is_isomorphic,
     ≃,
     ghash
-
-public 
-    NautyOptions
-    defaultoptions
-    
 end
