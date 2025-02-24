@@ -3,7 +3,7 @@ using Base.Threads
 @testset "nauty" begin
     verylarge_g = NautyGraph(50)
 
-    canonperm, autg = nauty(verylarge_g)
+    _, autg = nauty(verylarge_g)
     @test autg.n > typemax(Int64)
 
     g1 = NautyGraph(4)
@@ -81,6 +81,20 @@ using Base.Threads
     g4.hashval = UInt(0)
     @test g4 == h4
     @test Base.hash(g4) == Base.hash(h4)
+
+
+    g5 = NautyGraph(10, collect(10:-1:1))
+    add_edge!(g5, 1, 2)
+    add_edge!(g5, 5, 2)
+    add_edge!(g5, 6, 7)
+    add_edge!(g5, 8, 1)
+    add_edge!(g5, 9, 10)
+
+    canon5 = copy(g5)
+    canonize!(canon5)
+
+    canonperm5 = canonical_permutation(g5)
+    @test canon5.labels == g5.labels[canonperm5]
 
     thread_gs = fill(copy(g4), 10)
     vals = []

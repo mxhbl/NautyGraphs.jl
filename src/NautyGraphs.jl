@@ -34,6 +34,7 @@ export
     labels,
     nauty,
     canonize!,
+    canonical_permutation,
     is_isomorphic,
     ≃,
     ghash

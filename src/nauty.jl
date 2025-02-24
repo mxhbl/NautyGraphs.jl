@@ -145,6 +145,18 @@ function canonize!(g::DenseNautyGraph)
 end
 
 """
+    canonical_permutation(g::AbstractNautyGraph)
+
+Return the permutation `p` needed to canonize `g`. This permutation satisfies `g[p] = canong`.
+"""
+function canonical_permutation(::AbstractNautyGraph) end
+
+function canonical_permutation(g::DenseNautyGraph)
+    _, canonperm, _ = _densenauty(g)
+    return canonperm
+end
+
+"""
     is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph)
 
 Check whether two graphs `g` and `h` are isomorphic to each other by comparing their canonical forms.
