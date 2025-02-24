@@ -57,6 +57,8 @@ end
     
     g0 = erdos_renyi(70, 100; rng=rng)
     rand_g = NautyGraph(g0)
+    @test_throws "Cannot create an undirected NautyGraph from a directed graph" (rand_g_dir = NautyDiGraph(g0))
+
     @test nv(rand_g) == 70
     @test ne(rand_g) == 100
     @test vertices(rand_g) == Base.OneTo(70)
@@ -72,6 +74,7 @@ end
         @test outdegree(rand_g, vertex) == length(outneighbors(rand_g, vertex))
         @test indegree(rand_g, vertex) == length(inneighbors(rand_g, vertex))
     end
+
 
     g = NautyDiGraph(4)
     add_edge!(g, 1, 2)

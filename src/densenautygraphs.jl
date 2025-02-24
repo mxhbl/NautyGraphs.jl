@@ -58,13 +58,17 @@ function DenseNautyGraph{D}(adjmx::AbstractMatrix, vertex_labels::Union{Vector{<
 end
 
 function (::Type{G})(g::AbstractGraph, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {G<:AbstractNautyGraph}
+    if is_directed(g) != is_directed(G)
+        error("Cannot create an undirected NautyGraph from a directed graph (or vice versa). Please make sure the directedness of the graph types is matching.")
+    end
+
     ng = G(nv(g), vertex_labels)
 
     for e in edges(g)
         add_edge!(ng, e)
     end
     return ng
-end 
+end
 
 Base.copy(g::G) where {G<:DenseNautyGraph} = G(copy(g.graphset), g.n_vertices, g.n_edges, g.n_words, copy(g.labels), g.hashval)
 function Base.copy!(dest::G, src::G) where {G<:DenseNautyGraph}
