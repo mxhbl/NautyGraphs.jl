@@ -1,6 +1,3 @@
-using Graphs
-using SparseArrays, LinearAlgebra
-
 abstract type AbstractNautyGraph <: AbstractGraph{Cint} end
 # TODO: abstract type AbstractSparseNautyGraph <: AbstractNautyGraph end
 
@@ -75,6 +72,9 @@ end
 
 Base.show(io::Core.IO, g::DenseNautyGraph{false}) = print(io, "{$(nv(g)), $(ne(g))} undirected NautyGraph")
 Base.show(io::Core.IO, g::DenseNautyGraph{true}) = print(io, "{$(nv(g)), $(ne(g))} directed NautyGraph")
+
+Base.hash(g::DenseNautyGraph, h::UInt) = hash(g.labels, hash(g.graphset, h))
+Base.:(==)(g::DenseNautyGraph, h::DenseNautyGraph) = (g.graphset == h.graphset) && (g.labels == h.labels)
 
 begin # BASIC GRAPH API
     labels(g::AbstractNautyGraph) = g.labels

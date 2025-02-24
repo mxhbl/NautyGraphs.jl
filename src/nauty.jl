@@ -1,5 +1,5 @@
 mutable struct NautyOptions
-    getcanon::Cint
+    getcanon::Cint # Warning: setting getcanon to false means that nauty will NOT compute the canonical representative, which may lead to unexpected results.
     digraph::Cbool
     writeautoms::Cbool
     writemarkers::Cbool
@@ -25,14 +25,20 @@ mutable struct NautyOptions
     schreier::Cbool
     extra_options::Ptr{Cvoid}
 
-    NautyOptions() = new(
-        0, false, false, false, true, false, 78,
+    NautyOptions(; digraph, ignorelabels=false, groupinfo=false) = new(
+        1, digraph, groupinfo, false, ignorelabels, false, 78,
         C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL,
         100, 0, 1, 0,
-        C_NULL,
+        cglobal((:dispatch_graph, libnauty), Cvoid),
         false, C_NULL
     )
 end
+
+const GRAPHDEFAULTOPTIONS = NautyOptions(digraph=false)
+const DIGRAPHDEFAULTOPTIONS = NautyOptions(digraph=true)
+
+defaultoptions(g::DenseNautyGraph) = is_directed(g) ? DIGRAPHDEFAULTOPTIONS : GRAPHDEFAULTOPTIONS
+
 mutable struct NautyStatistics
     grpsize1::Cdouble
     grpsize2::Cint
@@ -53,35 +59,19 @@ mutable struct NautyStatistics
     )
 end
 
-# TODO: Make this useful
-# struct AutomorphismGroup{T<:Integer}
-#     n::T
-#     orbits::Vector{T}
-#     generators::T
-#     # ... 
-# end
+struct AutomorphismGroup
+    n::Float64
+    orbits::Vector{Cint}
+    # generators::Vector{Vector{Cint}} #TODO: not implemented
+end
 
-
-"""
-    nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...)
-
-Compute a graph g's automorphism group and its canonical form.
-"""
-function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=false, kwargs...) # TODO: allow nautyoptions to be overwritten
+function _densenauty(g::DenseNautyGraph, options::NautyOptions=defaultoptions(g), statistics::NautyStatistics=NautyStatistics())
+    # TODO: allow the user to pass pre-allocated arrays for lab, ptn, orbits, canong in a safe way.
     n, m = g.n_vertices, g.n_words
 
-    options = NautyOptions() # TODO: allocate default options outside and make sure they do not interfere with multithreading
-    options.dispatch = cglobal((:dispatch_graph, libnauty), Cvoid)
-    options.getcanon = canonical_form
-    options.digraph = is_directed(g)
-    options.defaultptn = ignore_vertex_labels || all(iszero, g.labels) # TODO: check more carefully if lab/ptn is valid
-
-    stats = NautyStatistics()
-
     lab, ptn = _vertexlabels_to_labptn(g.labels)
-
     orbits = zeros(Cint, n)
-    h = zero(g.graphset)
+    canong = zero(g.graphset)
 
     @ccall libnauty.densenauty(
         g.graphset::Ref{WordType},
@@ -89,55 +79,69 @@ function nauty(g::DenseNautyGraph, canonical_form=true; ignore_vertex_labels=fal
         ptn::Ref{Cint},
         orbits::Ref{Cint},
         Ref(options)::Ref{NautyOptions},
-        Ref(stats)::Ref{NautyStatistics},
+        Ref(statistics)::Ref{NautyStatistics},
         m::Cint,
         n::Cint,
-        h::Ref{WordType})::Cvoid
+        canong::Ref{WordType})::Cvoid
 
-    # TODO: clean this up
-    if stats.grpsize1 * 10^stats.grpsize2 < typemax(Int)
-        grpsize = round(Int, stats.grpsize1 * 10^stats.grpsize2)
-    else
-        @warn "automorphism group size overflow"
-        grpsize = 0
-    end
-    
-    # autmorph = AutomorphismGroup{T}(grpsize, orbits, stats.numgenerators) # TODO: summarize useful automorphism group info
-
-    if canonical_form
-        canong = h
-        canon_perm = lab .+ 1
-    else
-        canong = nothing
-        canon_perm = nothing
-    end
-    return grpsize, canong, canon_perm
+    canonperm = (lab .+= 1)
+    return canong, canonperm, orbits, statistics
 end
 
-function _nautyhash(g::DenseNautyGraph)
-    grpsize, canong, canon_perm = nauty(g, true)
-
+function _sethash!(g::DenseNautyGraph, canong, canonperm)
     # Base.hash skips elements in arrays of length >= 8192
     # Use SHA in these cases
     canong_hash = length(canong) >= 8192 ? hash_sha(canong) : hash(canong)
-    labels_hash = @views length(g.labels) >= 8192 ? hash_sha(g.labels[canon_perm]) : hash(g.labels[canon_perm])
+    labels_hash = @views length(g.labels) >= 8192 ? hash_sha(g.labels[canonperm]) : hash(g.labels[canonperm])
 
     hashval = hash(labels_hash, canong_hash)
     g.hashval = hashval
-    return grpsize, canong, canon_perm, hashval
+    return
+end
+function _canonize!(g::DenseNautyGraph, canong, canonperm)
+    copyto!(g.graphset, canong)
+    permute!(g.labels, canonperm)
+    return
 end
 
+
+"""
+    nauty(g::AbstractNautyGraph, [options::NautyOptions]; [canonize=false])
+
+Compute a graph g's canonical form and automorphism group. Also computes g's graph hash, which can then be retrieved without duplicate computations via `ghash(g)`.
+"""
+function nauty(::AbstractNautyGraph, ::NautyOptions; kwargs...) end
+
+function nauty(g::DenseNautyGraph, options::NautyOptions=defaultoptions(g); canonize=false)
+    if options.digraph != is_directed(g)
+        error("Nauty options need to match the directedness of the input graph. Make sure to instantiate options with `digraph=true` if the input graph is directed.")
+    end
+    if !isone(options.getcanon)
+        error("`options.getcanon` needs to be enabled.")
+    end
+
+    canong, canonperm, orbits, statistics = _densenauty(g, options)
+    _sethash!(g, canong, canonperm)
+
+    # generators = Vector{Cint}[] # TODO: extract generators from nauty call
+    autg = AutomorphismGroup(statistics.grpsize1 * 10^statistics.grpsize2, orbits)
+    if canonize
+        _canonize!(g, canong, canonperm)
+    end
+    return canonperm, autg
+end
 
 """
     canonize!(g::AbstractNautyGraph)
 
-Reorder g's vertices to be in canonical order. Returns the permutation used to canonize g and the automorphism group size.
+Reorder g's vertices to be in canonical order. Returns the permutation used to canonize g and the automorphism group.
 """
-function canonize!(g::AbstractNautyGraph)
-    grpsize, canong, canon_perm, hashval = _nautyhash(g)
-    copyto!(g.graphset, canong)
-    permute!(g.labels, canon_perm)
-    return canon_perm, grpsize
+function canonize!(::AbstractNautyGraph) end
+
+function canonize!(g::DenseNautyGraph)
+    canong, canonperm, _ = _densenauty(g)
+    _canonize!(g, canong, canonperm)
+    return canonperm
 end
 
 """
@@ -145,13 +149,14 @@ end
 
 Check whether two graphs g and h are isomorphic to each other by comparing their canonical forms.
 """
-function is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph)
-    _, canong, permg = nauty(g, true)
-    _, canonh, permh = nauty(h, true)
+function is_isomorphic(::AbstractNautyGraph, ::AbstractNautyGraph) end
+
+function is_isomorphic(g::DenseNautyGraph, h::DenseNautyGraph)
+    canong, permg, _ = _densenauty(g)
+    canonh, permh, _ = _densenauty(h)
     return canong == canonh && view(g.labels, permg) == view(h.labels, permh)
 end
 ≃(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)
-
 
 
 """
@@ -160,16 +165,14 @@ end
 Hash the canonical version of g, so that (up to hash collisions) `ghash(g1) == ghash(g2)` implies `is_isomorphic(g1, g2) == true`.
 Hashes are computed using `Base.hash` for small graphs (nv < 8192), or using the first 64 bits of `sha256` for larger graphs.
 """
-function ghash(g::AbstractNautyGraph)
+function ghash(::AbstractNautyGraph) end
+
+function ghash(g::DenseNautyGraph)
     if !isnothing(g.hashval)
         return g.hashval
     end
 
-    _, _, _, hashval = _nautyhash(g)
-    g.hashval = hashval
+    canong, canonperm, _ = _densenauty(g, defaultoptions(g))
+    _sethash!(g, canong, canonperm)
     return g.hashval
 end
-
-# TODO: decide what the default equality comparision should be
-Base.hash(g::DenseNautyGraph, h::UInt) = hash(g.labels, hash(g.graphset, h))
-Base.:(==)(g::DenseNautyGraph, h::DenseNautyGraph) = (g.graphset == h.graphset) && (g.labels == h.labels)

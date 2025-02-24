@@ -1,11 +1,10 @@
 using Base.Threads
 
 @testset "nauty" begin
-    overflow_g = NautyGraph(50)
+    verylarge_g = NautyGraph(50)
 
-    # Check group size overflow
-    grpsize, _, _ = nauty(overflow_g)
-    @test grpsize == 0
+    canonperm, autg = nauty(verylarge_g)
+    @test autg.n > typemax(Int64)
 
     g1 = NautyGraph(4)
     add_edge!(g1, 1, 2)
