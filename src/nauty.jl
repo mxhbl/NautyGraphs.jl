@@ -108,15 +108,16 @@ end
 """
     nauty(g::AbstractNautyGraph, [options::NautyOptions]; [canonize=false])
 
-Compute a graph g's canonical form and automorphism group. Also computes g's graph hash, which can then be retrieved without duplicate computations via `ghash(g)`.
+Compute a graph `g`'s canonical form and automorphism group.
 """
 function nauty(::AbstractNautyGraph, ::NautyOptions; kwargs...) end
 
-function nauty(g::DenseNautyGraph, options::NautyOptions=defaultoptions(g); canonize=false)
+function nauty(g::DenseNautyGraph, options::NautyOptions=defaultoptions(g); canonize=false, compute_hash=true)
     if options.digraph != is_directed(g)
         error("Nauty options need to match the directedness of the input graph. Make sure to instantiate options with `digraph=true` if the input graph is directed.")
     end
     if !isone(options.getcanon)
+        # Right now, all implemented functionality is based on computing the canonical form, so it makes no sense to run nauty without computing it.
         error("`options.getcanon` needs to be enabled.")
     end
 
@@ -124,17 +125,15 @@ function nauty(g::DenseNautyGraph, options::NautyOptions=defaultoptions(g); cano
     # generators = Vector{Cint}[] # TODO: extract generators from nauty call
     autg = AutomorphismGroup(statistics.grpsize1 * 10^statistics.grpsize2, orbits)
 
-    _sethash!(g, canong, canonperm)
-    if canonize
-        _canonize!(g, canong, canonperm)
-    end
+    compute_hash && _sethash!(g, canong, canonperm)
+    canonize && _canonize!(g, canong, canonperm)
     return canonperm, autg
 end
 
 """
     canonize!(g::AbstractNautyGraph)
 
-Reorder g's vertices to be in canonical order. Returns the permutation used to canonize g and the automorphism group.
+Reorder `g`'s vertices to be in canonical order. Returns the permutation `p` used to canonize `g`.
 """
 function canonize!(::AbstractNautyGraph) end
 
@@ -148,7 +147,7 @@ end
 """
     is_isomorphic(g::AbstractNautyGraph, h::AbstractNautyGraph)
 
-Check whether two graphs g and h are isomorphic to each other by comparing their canonical forms.
+Check whether two graphs `g` and `h` are isomorphic to each other by comparing their canonical forms.
 """
 function is_isomorphic(::AbstractNautyGraph, ::AbstractNautyGraph) end
 
@@ -163,7 +162,7 @@ end
 """
     ghash(g::AbstractNautyGraph)
 
-Hash the canonical version of g, so that (up to hash collisions) `ghash(g1) == ghash(g2)` implies `is_isomorphic(g1, g2) == true`.
+Hash the canonical version of `g`, so that (up to hash collisions) `ghash(g1) == ghash(g2)` implies `is_isomorphic(g1, g2) == true`.
 Hashes are computed using `Base.hash` for small graphs (nv < 8192), or using the first 64 bits of `sha256` for larger graphs.
 """
 function ghash(::AbstractNautyGraph) end
