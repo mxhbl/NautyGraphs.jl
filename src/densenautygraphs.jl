@@ -157,7 +157,7 @@ begin # BASIC GRAPH API
     Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
     Base.zero(::Type{G}) where {G<:AbstractNautyGraph} = G(0)
 
-    function Graphs.adjacency_matrix(g::DenseNautyGraph, T::DataType=Int; dir::Symbol=:out)
+    function Graphs.adjacency_matrix(g::DenseNautyGraph, T::DataType=Int)
         n = nv(g)
     
         es = _directed_edges(g)
@@ -323,7 +323,7 @@ function Graphs.blockdiag(g::G, h::G) where {G<:DenseNautyGraph}
     return k
 end
 function blockdiag!(g::G, h::G) where {G<:DenseNautyGraph}
-    @assert g !== h # Make sure g and h are different objects (TODO: could be lifted)
+    @assert g !== h # Make sure g and h don't alias the same memory.
 
     for i in vertices(h)
         add_vertex!(g, h.labels[i])
