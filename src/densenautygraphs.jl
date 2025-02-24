@@ -40,15 +40,12 @@ function DenseNautyGraph{D}(n::Integer, vertex_labels::Union{Vector{<:Integer},N
     return DenseNautyGraph(graphset, labels, D)
 end
 function DenseNautyGraph{D}(adjmx::AbstractMatrix, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {D}
-    n, _n = size(adjmx)
-
-    # Self loops are not allowed
-    @assert all(iszero, diag(adjmx))
+    n, n2 = size(adjmx)
 
     if !D
-        @assert adjmx == adjmx'
+        @assert issymmetric(adjmx)
     else
-        @assert n == _n
+        @assert n == n2
     end
     
     graphset = _adjmatrix_to_graphset(adjmx)
@@ -169,8 +166,13 @@ begin # GRAPH MODIFY METHODS
     end
     function Graphs.add_edge!(g::DenseNautyGraph{false}, e::Edge)
         fwd_edge_added = _modify_edge!(g, e, true)
-        bwd_edge_added = _modify_edge!(g, reverse(e), true)
-        edge_added = fwd_edge_added && bwd_edge_added
+
+        if e.src != e.dst
+            bwd_edge_added = _modify_edge!(g, reverse(e), true)
+            edge_added = fwd_edge_added && bwd_edge_added
+        else
+            edge_added = fwd_edge_added
+        end
 
         if edge_added
             g.n_edges += 1

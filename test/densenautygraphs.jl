@@ -48,6 +48,37 @@ symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1
         add_edge!(ng, 1, 2)
         @test adjacency_matrix(g) == adjacency_matrix(ng)
     end
+
+    g_loop = Graph(2)
+    ng_loop = NautyGraph(2)
+
+    add_edge!(g_loop, 1, 1)
+    add_edge!(ng_loop, 1, 1)
+    @test ne(ng_loop) == ne(g_loop)
+
+    @test adjacency_matrix(ng_loop) == adjacency_matrix(g_loop)
+
+    add_edge!(g_loop, 1, 2)
+    add_edge!(ng_loop, 1, 2)
+    @test ne(ng_loop) == ne(g_loop)
+
+    g_diloop = DiGraph(2)
+    ng_diloop = NautyDiGraph(2)
+    add_edge!(g_diloop, 1, 1)
+    add_edge!(ng_diloop, 1, 1)
+    @test ne(ng_diloop) == ne(g_diloop)
+
+    @test adjacency_matrix(ng_diloop) == adjacency_matrix(g_diloop)
+
+    add_edge!(g_diloop, 1, 1)
+    @test add_edge!(ng_diloop, 1, 1) == false
+    @test ne(ng_diloop) == ne(g_diloop)
+
+    @test adjacency_matrix(ng_diloop) == adjacency_matrix(g_diloop)
+
+    add_edge!(g_diloop, 1, 2)
+    add_edge!(ng_diloop, 1, 2)
+    @test ne(ng_diloop) == ne(g_diloop)
 end
 
 @testset "methods" begin
@@ -74,7 +105,6 @@ end
         @test outdegree(rand_g, vertex) == length(outneighbors(rand_g, vertex))
         @test indegree(rand_g, vertex) == length(inneighbors(rand_g, vertex))
     end
-
 
     g = NautyDiGraph(4)
     add_edge!(g, 1, 2)

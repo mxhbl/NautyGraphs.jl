@@ -21,8 +21,7 @@ const NautyDiGraph = DenseNautyGraph{true}
 function __init__()
     # global default options to nauty carry a pointer reference that needs to be initialized at runtime
     libnauty_dispatch = cglobal((:dispatch_graph, libnauty), Cvoid)
-    GRAPHDEFAULTOPTIONS.dispatch = libnauty_dispatch
-    DIGRAPHDEFAULTOPTIONS.dispatch = libnauty_dispatch
+    DEFAULT_OPTIONS.dispatch = libnauty_dispatch
     return
 end
 

@@ -1,6 +1,6 @@
 mutable struct NautyOptions
     getcanon::Cint # Warning: setting getcanon to false means that nauty will NOT compute the canonical representative, which may lead to unexpected results.
-    digraph::Cbool
+    digraph::Cbool # This needs to be true if the graph is directed or has loops. Disabling this option for undirected graphs with no loops may increase performance.
     writeautoms::Cbool
     writemarkers::Cbool
     defaultptn::Cbool
@@ -25,8 +25,8 @@ mutable struct NautyOptions
     schreier::Cbool
     extra_options::Ptr{Cvoid}
 
-    NautyOptions(; digraph, ignorelabels=false, groupinfo=false) = new(
-        1, digraph, groupinfo, false, ignorelabels, false, 78,
+    NautyOptions(; digraph_or_loops=true, ignorelabels=false, groupinfo=false) = new(
+        1, digraph_or_loops, groupinfo, false, ignorelabels, false, 78,
         C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL,
         100, 0, 1, 0,
         cglobal((:dispatch_graph, libnauty), Cvoid),
@@ -34,10 +34,7 @@ mutable struct NautyOptions
     )
 end
 
-const GRAPHDEFAULTOPTIONS = NautyOptions(digraph=false)
-const DIGRAPHDEFAULTOPTIONS = NautyOptions(digraph=true)
-
-defaultoptions(g::DenseNautyGraph) = is_directed(g) ? DIGRAPHDEFAULTOPTIONS : GRAPHDEFAULTOPTIONS
+const DEFAULT_OPTIONS = NautyOptions(digraph_or_loops=true)
 
 mutable struct NautyStatistics
     grpsize1::Cdouble
@@ -65,7 +62,7 @@ struct AutomorphismGroup
     # generators::Vector{Vector{Cint}} #TODO: not implemented
 end
 
-function _densenauty(g::DenseNautyGraph, options::NautyOptions=defaultoptions(g), statistics::NautyStatistics=NautyStatistics())
+function _densenauty(g::DenseNautyGraph, options::NautyOptions=DEFAULT_OPTIONS, statistics::NautyStatistics=NautyStatistics())
     # TODO: allow the user to pass pre-allocated arrays for lab, ptn, orbits, canong in a safe way.
     n, m = g.n_vertices, g.n_words
 
@@ -112,8 +109,8 @@ Compute a graph `g`'s canonical form and automorphism group.
 """
 function nauty(::AbstractNautyGraph, ::NautyOptions; kwargs...) end
 
-function nauty(g::DenseNautyGraph, options::NautyOptions=defaultoptions(g); canonize=false, compute_hash=true)
-    if options.digraph != is_directed(g)
+function nauty(g::DenseNautyGraph, options::NautyOptions=DEFAULT_OPTIONS; canonize=false, compute_hash=true)
+    if is_directed(g) && !isone(options.digraph)
         error("Nauty options need to match the directedness of the input graph. Make sure to instantiate options with `digraph=true` if the input graph is directed.")
     end
     if !isone(options.getcanon)
@@ -184,7 +181,7 @@ function ghash(g::DenseNautyGraph)
         return g.hashval
     end
 
-    canong, canonperm, _ = _densenauty(g, defaultoptions(g))
+    canong, canonperm, _ = _densenauty(g)
     _sethash!(g, canong, canonperm)
     return g.hashval
 end

@@ -102,4 +102,27 @@ using Base.Threads
         push!(vals, nauty(thread_gs[i]))
     end
     @test length(vals) == length(thread_gs)
+
+
+    gnoloop = NautyGraph(5)
+    add_edge!(gnoloop, 1, 2)
+    add_edge!(gnoloop, 3, 5)
+    add_edge!(gnoloop, 5, 2)
+
+    gloop = copy(gnoloop)
+    add_edge!(gloop, 1, 1)
+
+    @test_nowarn nauty(gloop)
+    @test !is_isomorphic(gnoloop, gloop)
+
+    gdinoloop = NautyDiGraph(5)
+    add_edge!(gdinoloop, 1, 2)
+    add_edge!(gdinoloop, 3, 5)
+    add_edge!(gdinoloop, 5, 2)
+
+    gdiloop = copy(gdinoloop)
+    add_edge!(gdiloop, 1, 1)
+
+    @test_nowarn nauty(gdiloop)
+    @test !is_isomorphic(gdinoloop, gdiloop)
 end
