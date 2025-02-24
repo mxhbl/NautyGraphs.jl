@@ -311,6 +311,12 @@ function Graphs.blockdiag(g::G, h::G) where {G<:DenseNautyGraph}
     k.n_edges = g.n_edges + h.n_edges
     return k
 end
+
+"""
+    blockdiag!(g::G, h::G) where {G<:DenseNautyGraph}
+
+Compute `blockdiag(g, h)` and store it in `g`, whose size is increased to accomodate it.
+"""
 function blockdiag!(g::G, h::G) where {G<:DenseNautyGraph}
     @assert g !== h # Make sure g and h don't alias the same memory.
 
