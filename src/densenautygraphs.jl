@@ -156,19 +156,6 @@ begin # BASIC GRAPH API
     Base.eltype(::AbstractNautyGraph) = Cint
     Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
     Base.zero(::Type{G}) where {G<:AbstractNautyGraph} = G(0)
-
-    function Graphs.adjacency_matrix(g::DenseNautyGraph, T::DataType=Int)
-        n = nv(g)
-    
-        es = _directed_edges(g)
-        k = length(es)
-        is, js, vals = zeros(T, k), zeros(T, k), ones(T, k)
-        for (i, e) in enumerate(es)
-            is[i] = e.src
-            js[i] = e.dst
-        end
-        return sparse(is, js, vals, n, n)
-    end
 end
 
 begin # GRAPH MODIFY METHODS
