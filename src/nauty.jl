@@ -121,10 +121,10 @@ function nauty(g::DenseNautyGraph, options::NautyOptions=defaultoptions(g); cano
     end
 
     canong, canonperm, orbits, statistics = _densenauty(g, options)
-    _sethash!(g, canong, canonperm)
-
     # generators = Vector{Cint}[] # TODO: extract generators from nauty call
     autg = AutomorphismGroup(statistics.grpsize1 * 10^statistics.grpsize2, orbits)
+
+    _sethash!(g, canong, canonperm)
     if canonize
         _canonize!(g, canong, canonperm)
     end
@@ -140,6 +140,7 @@ function canonize!(::AbstractNautyGraph) end
 
 function canonize!(g::DenseNautyGraph)
     canong, canonperm, _ = _densenauty(g)
+    _sethash!(g, canong, canonperm)
     _canonize!(g, canong, canonperm)
     return canonperm
 end
