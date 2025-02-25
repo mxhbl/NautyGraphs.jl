@@ -245,15 +245,15 @@ begin # GRAPH MODIFY METHODS
 
     function Graphs.rem_vertices!(g::DenseNautyGraph, inds::AbstractVector{<:Integer})
         n = nv(g)
-        if any(inds .> n)
+        sort!(inds)
+        if last(inds) > n
             return false
         end
-
-        inds = sort(inds)
+        
         m = g.n_words
 
-        i_vecs = _to_vecidx.(inds, Ref(1), m)
-        deleteat!(g.graphset, Iterators.flatten(i:i+m-1 for i in sort(i_vecs)))
+        i_vecs = sort!(_to_vecidx.(inds, Ref(1), m))
+        deleteat!(g.graphset, Iterators.flatten(i:i+m-1 for i in i_vecs))
         # Shift all bits such that the vertices are renamed correctly
         d = 0
         for i in inds
@@ -281,12 +281,15 @@ begin # GRAPH MODIFY METHODS
         g.hashval = nothing
         g.n_vertices -= length(inds)
 
+        # Remove extra words if they are no longer needed
+        # TODO: make this optional
         m_new = ceil(Cint, g.n_vertices / WORDSIZE)
         if m_new < m
             deleteat!(g.graphset, Iterators.flatten(i+m_new:i+m-1 for i in 1:m:g.n_vertices*m))
             g.n_words = m_new
         end
-        
+
+        # Recount edges
         n_edges = 0
         for word in g.graphset
             n_edges += count_bits(word)
