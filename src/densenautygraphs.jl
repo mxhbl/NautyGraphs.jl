@@ -219,7 +219,7 @@ begin # GRAPH MODIFY METHODS
             end
         end
 
-        append!(g.graphset, [zero(WordType) for _ in 1:m])
+        append!(g.graphset, fill(zero(WordType), m))
 
         if isnothing(label)
             push!(g.labels, zero(Cint))
