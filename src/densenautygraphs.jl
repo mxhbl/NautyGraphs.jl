@@ -331,5 +331,6 @@ function blockdiag!(g::G, h::G) where {G<:DenseNautyGraph}
 
     transfer_set!(g.graphset, h.graphset, (ng - nh) * mg * WORDSIZE + (ng - nh), mg, mh)
     g.n_edges += h.n_edges
+    g.hashval = nothing
     return g
 end
