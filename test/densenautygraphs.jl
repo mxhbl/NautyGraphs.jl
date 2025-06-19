@@ -144,7 +144,7 @@ end
     @test h.hashval == g.hashval
 
 
-    g = NautyGraph(5, collect(1:5))
+    g = NautyGraph(5, 1:5)
     add_edge!(g, 1, 2)
     add_edge!(g, 1, 3)
     add_edge!(g, 1, 4)

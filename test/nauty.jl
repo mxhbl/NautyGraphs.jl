@@ -83,7 +83,7 @@ using Base.Threads
     @test Base.hash(g4) == Base.hash(h4)
 
 
-    g5 = NautyGraph(10, collect(10:-1:1))
+    g5 = NautyGraph(10, 10:-1:1)
     add_edge!(g5, 1, 2)
     add_edge!(g5, 5, 2)
     add_edge!(g5, 6, 7)
