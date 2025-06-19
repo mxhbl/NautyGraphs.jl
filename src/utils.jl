@@ -1,14 +1,5 @@
-function _initialize_vertexlabels(n::Integer, vertex_labels::Union{Vector{<:Integer},Nothing})
-    if isnothing(vertex_labels)
-        return zeros(Cint, n)
-    else
-        return convert(Vector{Cint}, vertex_labels)
-    end
-end
-
 function _adjmatrix_to_graphset(A::AbstractMatrix{<:Integer})
     n, _n = size(A)
-    @assert n == _n
 
     m = ceil(Cint, n / WORDSIZE)
 
@@ -53,7 +44,7 @@ function _vertexlabels_to_labptn(labels::Vector{<:Integer})
     ptn = zeros(Cint, n)
     return _vertexlabels_to_labptn!(lab, ptn, labels)
 end
-function _vertexlabels_to_labptn!(lab::Vector{Cint}, ptn::Vector{Cint}, labels::Vector{<:Integer})
+function _vertexlabels_to_labptn!(lab::Vector{<:Integer}, ptn::Vector{<:Integer}, labels::Vector{<:Integer})
     lab .= 1:length(labels)
     sort!(lab, alg=QuickSort, by=k -> labels[k])
     @views lab .-= 1

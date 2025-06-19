@@ -11,13 +11,12 @@ mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
 
     function DenseNautyGraph(graphset, labels, directed::Bool)
         n_vertices = length(labels)
-        if n_vertices > 0
-            n_words = length(graphset) ÷ n_vertices
-        else
-            n_words = 1
+        n_words = n_vertices > 0 ? length(graphset) ÷ n_vertices : 1
+
+        if length(graphset) != n_words * n_vertices
+            error("length of `graphset` is not compatible with length of `labels`. See the nauty user guide for how to correctly construct `graphset`.")
         end
 
-        @assert length(graphset) == n_words * n_vertices
         n_edges = 0
         for word in graphset
             n_edges += count_bits(word)
@@ -32,29 +31,31 @@ mutable struct DenseNautyGraph{D} <: AbstractNautyGraph
     end
 end
 
-function DenseNautyGraph{D}(n::Integer, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {D}
-    !isnothing(vertex_labels) && @assert n == length(vertex_labels)
+function DenseNautyGraph{D}(n::Integer, vertex_labels=nothing) where {D}
+    if !isnothing(vertex_labels) && n != length(vertex_labels)
+        error("Incompatible length: `vertex_labels` has length $(length(vertex_labels)) instead of `n=$n`.")
+    end
     m = ceil(Cint, n / WORDSIZE)
     graphset = zeros(WordType, Int(n * m))
-    labels = _initialize_vertexlabels(n, vertex_labels)
+    labels = isnothing(vertex_labels) ? zeros(Cint, n) : convert(Vector{Cint}, vertex_labels)
     return DenseNautyGraph(graphset, labels, D)
 end
-function DenseNautyGraph{D}(adjmx::AbstractMatrix, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {D}
+function DenseNautyGraph{D}(adjmx::AbstractMatrix, vertex_labels=nothing) where {D}
     n, n2 = size(adjmx)
 
     if !D
-        @assert issymmetric(adjmx)
+        !issymmetric(adjmx) && error("Cannot create an undirected NautyGraph from a non-symmetric adjacency matrix. Make sure the adjacency matrix is square symmetric!")
     else
-        @assert n == n2
+        n != n2 && error("Cannot create a NautyGraph from a rectangular matrix. Make sure the adjacency matrix is square!")
     end
     
     graphset = _adjmatrix_to_graphset(adjmx)
-    labels = _initialize_vertexlabels(n, vertex_labels)
+    labels = isnothing(vertex_labels) ? zeros(Cint, n) : convert(Vector{Cint}, vertex_labels)
 
     return DenseNautyGraph(graphset, labels, D)
 end
 
-function (::Type{G})(g::AbstractGraph, vertex_labels::Union{Vector{<:Integer},Nothing}=nothing) where {G<:AbstractNautyGraph}
+function (::Type{G})(g::AbstractGraph, vertex_labels=nothing) where {G<:AbstractNautyGraph}
     if is_directed(g) != is_directed(G)
         error("Cannot create an undirected NautyGraph from a directed graph (or vice versa). Please make sure the directedness of the graph types is matching.")
     end
@@ -153,6 +154,16 @@ begin # BASIC GRAPH API
     Base.eltype(::AbstractNautyGraph) = Cint
     Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
     Base.zero(::Type{G}) where {G<:AbstractNautyGraph} = G(0)
+
+    function _induced_subgraph(g::DenseNautyGraph, iter)
+        h, vmap = invoke(Graphs.induced_subgraph, Tuple{AbstractGraph,typeof(iter)}, g, iter)
+        @views h.labels .= g.labels[vmap]
+        return h, vmap
+    end
+
+    Graphs.induced_subgraph(g::DenseNautyGraph, iter::AbstractVector{<:Integer}) = _induced_subgraph(g::DenseNautyGraph, iter)
+    Graphs.induced_subgraph(g::DenseNautyGraph, iter::AbstractVector{Bool}) = _induced_subgraph(g::DenseNautyGraph, iter)
+    Graphs.induced_subgraph(g::DenseNautyGraph, iter::AbstractVector{<:AbstractEdge}) = _induced_subgraph(g::DenseNautyGraph, iter)
 end
 
 begin # GRAPH MODIFY METHODS
@@ -203,8 +214,8 @@ begin # GRAPH MODIFY METHODS
     end
     Graphs.rem_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.rem_edge!(g, Graphs.Edge{Cint}(i, j))
 
-    function Graphs.add_vertex!(g::DenseNautyGraph, label::Union{<:Integer,Nothing}=nothing)
-        if isnothing(label)
+    function Graphs.add_vertex!(g::DenseNautyGraph, vertex_label::Union{<:Integer,Nothing}=nothing)
+        if isnothing(vertex_label)
             labeled = !all(iszero, g.labels)
             labeled && error("Cannot add an unlabeled vertex to a labeled nautygraph. Use `add_vertex!(g, label)` to add a labeled vertex.")
         end
@@ -221,23 +232,23 @@ begin # GRAPH MODIFY METHODS
 
         append!(g.graphset, fill(zero(WordType), m))
 
-        if isnothing(label)
+        if isnothing(vertex_label)
             push!(g.labels, zero(Cint))
         else
-            push!(g.labels, convert(Cint, label))
+            push!(g.labels, convert(Cint, vertex_label))
         end
 
         g.hashval = nothing
         g.n_vertices += 1
         return true
     end
-    function Graphs.add_vertices!(g::AbstractNautyGraph, n::Integer, labels::Union{AbstractVector{<:Integer},Nothing}=nothing)
-        if isnothing(labels)
-            return sum([add_vertex!(g) for i in 1:n])
+    function Graphs.add_vertices!(g::AbstractNautyGraph, n::Integer, vertex_labels::Union{AbstractVector,Nothing}=nothing)
+        if isnothing(vertex_labels)
+            return sum(_->add_vertex!(g), 1:n)
         end
 
-        @assert n == length(labels)
-        for l in labels
+        n != length(vertex_labels) && error("Incompatible length: `vertex_labels` has length $(length(vertex_labels)) instead of `n=$n`.")
+        for l in vertex_labels
             add_vertex!(g, l)
         end
         return n

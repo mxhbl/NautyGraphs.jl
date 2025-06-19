@@ -142,4 +142,18 @@ end
     @test h.n_words == g.n_words
     @test h.labels == g.labels
     @test h.hashval == g.hashval
+
+
+    g = NautyGraph(5, 1:5)
+    add_edge!(g, 1, 2)
+    add_edge!(g, 1, 3)
+    add_edge!(g, 1, 4)
+    add_edge!(g, 1, 5)
+    add_edge!(g, 2, 5)
+
+    gind1 = g[[1, 5, 2]]
+    @test gind1.labels == [1, 5, 2]
+
+    gind2 = g[[Edge(1, 2), Edge(1, 4)]]
+    @test gind2.labels == [1, 2, 4]
 end
