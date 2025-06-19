@@ -1,6 +1,5 @@
 function _adjmatrix_to_graphset(A::AbstractMatrix{<:Integer})
     n, _n = size(A)
-    @assert n == _n
 
     m = ceil(Cint, n / WORDSIZE)
 

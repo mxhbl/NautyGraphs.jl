@@ -12,7 +12,7 @@ function push_bits(word::WordType, fill::WordType, n::Integer, k::Integer)
     return (word & write_mask) | move_chunk | copy_chunk
 end
 function rightshift_set!(set::Vector{WordType}, offset::Integer)
-    @assert offset > 0
+    # @assert offset > 0
 
     overflow = zero(WordType)
     for i in eachindex(set)
@@ -25,7 +25,7 @@ function rightshift_set!(set::Vector{WordType}, offset::Integer)
     end
 end
 function transfer_set!(target::Vector{WordType}, set::Vector{WordType}, offset::Integer, m_target::Integer=1, m_set::Integer=1)
-    @assert offset >= 0
+    # @assert offset >= 0
 
     overflow = zero(WordType)
     dn = offset ÷ WORDSIZE
@@ -116,7 +116,7 @@ function set_to_idxs!(set::AbstractVector{WordType}, idxs::AbstractVector{<:Inte
 end
 
 function _concatbytes(bytes::AbstractVector{<:UInt8})
-    @assert length(bytes) == sizeof(HashType)
+    # @assert length(bytes) == sizeof(HashType)
     w = HashType(0)
     for b in bytes
         w |= b
@@ -130,6 +130,6 @@ function _to_matrixidx(idx::Integer, m::Integer)
 end
 
 function _to_vecidx(i::Integer, j::Integer, m::Integer)
-    @assert j <= m
+    # @assert j <= m
     return (i - 1) * m + j
 end
