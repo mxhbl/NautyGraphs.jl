@@ -153,6 +153,16 @@ begin # BASIC GRAPH API
     Base.eltype(::AbstractNautyGraph) = Cint
     Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
     Base.zero(::Type{G}) where {G<:AbstractNautyGraph} = G(0)
+
+    function _induced_subgraph(g::DenseNautyGraph, iter)
+        h, vmap = invoke(Graphs.induced_subgraph, Tuple{AbstractGraph,typeof(iter)}, g, iter)
+        @views h.labels .= g.labels[vmap]
+        return h, vmap
+    end
+
+    Graphs.induced_subgraph(g::DenseNautyGraph, iter::AbstractVector{<:Integer}) = _induced_subgraph(g::DenseNautyGraph, iter)
+    Graphs.induced_subgraph(g::DenseNautyGraph, iter::AbstractVector{Bool}) = _induced_subgraph(g::DenseNautyGraph, iter)
+    Graphs.induced_subgraph(g::DenseNautyGraph, iter::AbstractVector{<:AbstractEdge}) = _induced_subgraph(g::DenseNautyGraph, iter)
 end
 
 begin # GRAPH MODIFY METHODS
