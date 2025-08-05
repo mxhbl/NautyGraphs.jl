@@ -1,6 +1,7 @@
 module NautyGraphs
 
 using Graphs, SparseArrays, LinearAlgebra, SHA
+using Graphs.SimpleGraphs: SimpleEdgeIter
 import nauty_jll
 
 const libnauty = nauty_jll.libnautyTL
@@ -10,9 +11,9 @@ const WordType = Culong
 const Cbool = Cint
 const HashType = UInt
 
-include("densenautygraphs.jl")
 include("utils.jl")
-include("bitutils.jl")
+# include("bitutils.jl")
+include("densenautygraphs.jl")
 include("nauty.jl")
 
 const NautyGraph = DenseNautyGraph{false}

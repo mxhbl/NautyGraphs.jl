@@ -62,16 +62,16 @@ struct AutomorphismGroup
     # generators::Vector{Vector{Cint}} #TODO: not implemented
 end
 
-function _densenauty(g::DenseNautyGraph, options::NautyOptions=DEFAULT_OPTIONS, statistics::NautyStatistics=NautyStatistics())
+function _densenauty(g::DenseNautyGraph{D,W}, options::NautyOptions=DEFAULT_OPTIONS, statistics::NautyStatistics=NautyStatistics()) where {D,W}
     # TODO: allow the user to pass pre-allocated arrays for lab, ptn, orbits, canong in a safe way.
-    n, m = g.n_vertices, g.n_words
+    n, m = g.graphset.n, g.graphset.m
 
-    lab, ptn = _vertexlabels_to_labptn(g.labels)
+    lab, ptn = vertexlabels2labptn(g.labels)
     orbits = zeros(Cint, n)
-    canong = zero(g.graphset)
+    canong = Graphset{W}(n, m)
 
     @ccall libnauty.densenauty(
-        g.graphset::Ref{WordType},
+        g.graphset.words::Ref{W},
         lab::Ref{Cint},
         ptn::Ref{Cint},
         orbits::Ref{Cint},
@@ -79,24 +79,24 @@ function _densenauty(g::DenseNautyGraph, options::NautyOptions=DEFAULT_OPTIONS, 
         Ref(statistics)::Ref{NautyStatistics},
         m::Cint,
         n::Cint,
-        canong::Ref{WordType})::Cvoid
+        canong.words::Ref{W})::Cvoid
 
     canonperm = (lab .+= 1)
     return canong, canonperm, orbits, statistics
 end
 
-function _sethash!(g::DenseNautyGraph, canong, canonperm)
+function _sethash!(g::DenseNautyGraph, canong::Graphset, canonperm)
     # Base.hash skips elements in arrays of length >= 8192
     # Use SHA in these cases
-    canong_hash = length(canong) >= 8192 ? hash_sha(canong) : hash(canong)
+    canong_hash = length(canong.words) >= 8192 ? hash_sha(canong.words) : hash(canong.words)
     labels_hash = @views length(g.labels) >= 8192 ? hash_sha(g.labels[canonperm]) : hash(g.labels[canonperm])
 
     hashval = hash(labels_hash, canong_hash)
     g.hashval = hashval
     return
 end
-function _canonize!(g::DenseNautyGraph, canong, canonperm)
-    copyto!(g.graphset, canong)
+function _canonize!(g::DenseNautyGraph, canong::Graphset, canonperm)
+    copy!(g.graphset, canong)
     permute!(g.labels, canonperm)
     return
 end

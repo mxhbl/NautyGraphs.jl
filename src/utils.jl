@@ -31,6 +31,18 @@ Base.size(gset::Graphset) = (gset.n, gset.n)
 Base.IndexStyle(::Type{Graphset}) = IndexCartesian()
 Base.similar(gset::Graphset{W}) where {W} = Graphset{W}(gset.n, gset.m)
 
+function Base.copy!(dest::Graphset{W}, src::Graphset{W}) where {W}
+    dest.n == src.n || throw(ArgumentError("graphsets must have the same size for copy!"))
+    if dest.m == src.m
+        copyto!(dest.words, src.words)
+    else
+        dest .== src
+    end
+    return dest
+end
+
+@inline wordtype(::Graphset{W}) where {W} = W
+@inline wordsize(u::Unsigned) = 8 * sizeof(u)
 @inline wordsize(T::Type{<:Unsigned}) = 8 * sizeof(T)
 @inline wordsize(::Graphset{W}) where {W} = wordsize(W)
 @inline logwordsize(::Type{UInt16}) = 4
@@ -50,14 +62,14 @@ Base.similar(gset::Graphset{W}) where {W} = Graphset{W}(gset.n, gset.m)
     return wordidx, bitidx
 end
 
-@inline function getbit(word::W, i::Integer) where {W}
+@inline function getbit(word::W, i::Integer) where {W<:Unsigned}
     ws = wordsize(W)
     @boundscheck checkindex(Bool, Base.OneTo(ws), i) || throw(BoundsError(word, i))
     mask = one(W) << (ws - i)
     return (mask & word) != zero(W)
 end
 
-@inline function setbit(word::W, x::Bool, i::Integer) where {W}
+@inline function setbit(word::W, x::Bool, i::Integer) where {W<:Unsigned}
     ws = wordsize(W)
     @boundscheck checkindex(Bool, Base.OneTo(ws), i) || throw(BoundsError(word, i))
     mask = one(W) << (ws - i)
@@ -106,15 +118,15 @@ end
     return unshifted_part | shifted_part | filled_part
 end
 
-function add_vertices!(gset::Graphset{W}, n::Integer) where {W} # TODO think of a better name
+function _add_vertices!(gset::Graphset{W}, n::Integer) where {W} # TODO think of a better name
     _increase_padding!(gset, cld(gset.n + n, wordsize(gset)) - gset.m)
     append!(gset.words, fill(zero(W), n*gset.m))
     gset.n += n
     return gset
 end
-add_vertex!(gset::Graphset) = add_vertices!(gset, 1)
+_add_vertex!(gset::Graphset) = add_vertices!(gset, 1)
 
-function rem_vertices!(gset::Graphset{W}, inds) where {W}
+function _rem_vertices!(gset::Graphset{W}, inds) where {W}
     nrv = length(inds)
 
     deleteat!(gset.words, Iterators.flatten(1+(i-1)*gset.m:i*gset.m for i in inds))
@@ -141,90 +153,90 @@ function rem_vertices!(gset::Graphset{W}, inds) where {W}
     end
     return gset
 end
-rem_vertex!(gset::Graphset, i::Integer) = rem_vertices!(gset, (i,))
+_rem_vertex!(gset::Graphset, i::Integer) = rem_vertices!(gset, (i,))
 
 
-function _adjmatrix_to_graphset(A::AbstractMatrix{<:Integer})
-    n, _n = size(A)
+# function _adjmatrix_to_graphset(A::AbstractMatrix{<:Integer})
+#     n, _n = size(A)
 
-    m = ceil(Cint, n / WORDSIZE)
+#     m = ceil(Cint, n / WORDSIZE)
 
-    G = zeros(Cint, n, m * WORDSIZE)
-    G[:, 1:n] .= A
-    # Reshape the padded adjacency matrix from 
-    # (a b c)
-    # (d f g)
-    # to
-    # (a b c d f g)'
-    G = reshape(G', Int(WORDSIZE), Int(n * m))'
+#     G = zeros(Cint, n, m * WORDSIZE)
+#     G[:, 1:n] .= A
+#     # Reshape the padded adjacency matrix from 
+#     # (a b c)
+#     # (d f g)
+#     # to
+#     # (a b c d f g)'
+#     G = reshape(G', Int(WORDSIZE), Int(n * m))'
 
-    graphset = zeros(WordType, Int(n * m))
-    for i in eachindex(graphset)
-        graphset[i] = bitvec_to_word(@view G[i, :])
-    end
-    return graphset
-end
+#     graphset = zeros(WordType, Int(n * m))
+#     for i in eachindex(graphset)
+#         graphset[i] = bitvec_to_word(@view G[i, :])
+#     end
+#     return graphset
+# end
 
-function _directed_edges(g::DenseNautyGraph)
-    n, m = g.n_vertices, g.n_words
+# function _directed_edges(g::DenseNautyGraph)
+#     n, m = g.n_vertices, g.n_words
 
-    edges = Edge{Cint}[]
-    js = zeros(Cint, WORDSIZE)
-    for set_idx in eachindex(g.graphset)
-        i = 1 + (set_idx - 1) ÷ m
-        j0 = ((set_idx - 1) % m) * WORDSIZE
+#     edges = Edge{Cint}[]
+#     js = zeros(Cint, WORDSIZE)
+#     for set_idx in eachindex(g.graphset)
+#         i = 1 + (set_idx - 1) ÷ m
+#         j0 = ((set_idx - 1) % m) * WORDSIZE
 
-        k = word_to_idxs!(g.graphset[set_idx], js)
-        js .+= j0
-        for j in 1:k
-            push!(edges, Edge{Cint}(i, js[j]))
-        end
-    end
+#         k = word_to_idxs!(g.graphset[set_idx], js)
+#         js .+= j0
+#         for j in 1:k
+#             push!(edges, Edge{Cint}(i, js[j]))
+#         end
+#     end
 
-    return edges
-end
+#     return edges
+# end
 
-function _vertexlabels_to_labptn(labels::Vector{<:Integer})
+function vertexlabels2labptn(labels::Vector{<:Integer})
     n = length(labels)
     lab = zeros(Cint, n)
     ptn = zeros(Cint, n)
-    return _vertexlabels_to_labptn!(lab, ptn, labels)
+    return vertexlabels2labptn!(lab, ptn, labels)
 end
-function _vertexlabels_to_labptn!(lab::Vector{<:Integer}, ptn::Vector{<:Integer}, labels::Vector{<:Integer})
+function vertexlabels2labptn!(lab::Vector{<:Integer}, ptn::Vector{<:Integer}, labels::Vector{<:Integer})
     lab .= 1:length(labels)
-    sort!(lab, alg=QuickSort, by=k -> labels[k])
+    sort!(lab, alg=QuickSort, by=k->labels[k])
     @views lab .-= 1
 
     for i in 1:length(lab)-1
-        ptn[i] = labels[lab[i+1]+1] == labels[lab[i]+1] ? 1 : 0
+        ptn[i] = ifelse(labels[lab[i+1]+1] == labels[lab[i]+1], 1, 0)
     end
     return lab, ptn
 end
 
-function _modify_edge!(g::AbstractNautyGraph, e::Edge, add::Bool)
-    # Adds or removes the edge e
-    n, m = g.n_vertices, g.n_words
-    i, j = e.src, e.dst
-    if i > n || j > n
-        return false
-    end
+# function _modify_edge!(g::AbstractNautyGraph, e::Edge, add::Bool)
+#     # Adds or removes the edge e
+#     n, m = g.n_vertices, g.n_words
+#     i, j = e.src, e.dst
+#     if i > n || j > n
+#         return false
+#     end
 
-    set_idx = 1 + (i - 1) * m + (j - 1) ÷ WORDSIZE
-    # left = 1000000000.... 
-    left = one(WordType) << (WORDSIZE - 1)
-    new_edge = left >> ((j - 1) % WORDSIZE)
+#     set_idx = 1 + (i - 1) * m + (j - 1) ÷ WORDSIZE
+#     # left = 1000000000.... 
+#     left = one(WordType) << (WORDSIZE - 1)
+#     new_edge = left >> ((j - 1) % WORDSIZE)
 
-    word_old = g.graphset[set_idx]
-    if add
-        g.graphset[set_idx] |= new_edge
-        counter = +1
-    else
-        g.graphset[set_idx] &= ~new_edge
-        counter = -1
-    end
+#     word_old = g.graphset[set_idx]
+#     if add
+#         g.graphset[set_idx] |= new_edge
+#         counter = +1
+#     else
+#         g.graphset[set_idx] &= ~new_edge
+#         counter = -1
+#     end
 
-    return g.graphset[set_idx] != word_old
-end
+#     return g.graphset[set_idx] != word_old
+# end
 
 function hash_sha(x)
     io = IOBuffer()

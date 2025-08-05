@@ -19,12 +19,12 @@ using Base.Threads
     @test g1 ≃ h1
     @test ghash(g1) == ghash(h1)
 
-    g2 = NautyGraph(4, [0, 0, 1, 1])
+    g2 = NautyGraph(4; vertex_labels=[0, 0, 1, 1])
     add_edge!(g2, 1, 2)
     add_edge!(g2, 2, 3)
     add_edge!(g2, 2, 4)
 
-    h2 = NautyGraph(4, [1, 1, 0, 0])
+    h2 = NautyGraph(4; vertex_labels=[1, 1, 0, 0])
     add_edge!(h2, 3, 4)
     add_edge!(h2, 4, 1)
     add_edge!(h2, 4, 2)
@@ -33,7 +33,7 @@ using Base.Threads
     @test ghash(g2) == ghash(h2)
 
 
-    k2 = NautyGraph(4, [1, 0, 0, 1])
+    k2 = NautyGraph(4; vertex_labels=[1, 0, 0, 1])
     add_edge!(k2, 3, 4)
     add_edge!(k2, 4, 1)
     add_edge!(k2, 4, 2)
@@ -70,8 +70,8 @@ using Base.Threads
     @test adjacency_matrix(m3) == adjacency_matrix(h3)
 
 
-    g4 = NautyGraph(3, [1, 2, 3])
-    h4 = NautyGraph(3, [1, 2, 3])
+    g4 = NautyGraph(3; vertex_labels=[1, 2, 3])
+    h4 = NautyGraph(3; vertex_labels=[1, 2, 3])
     add_edge!(g4, 1, 2)
     add_edge!(h4, 1, 2)
 
@@ -83,7 +83,7 @@ using Base.Threads
     @test Base.hash(g4) == Base.hash(h4)
 
 
-    g5 = NautyGraph(10, 10:-1:1)
+    g5 = NautyGraph(10; vertex_labels=10:-1:1)
     add_edge!(g5, 1, 2)
     add_edge!(g5, 5, 2)
     add_edge!(g5, 6, 7)

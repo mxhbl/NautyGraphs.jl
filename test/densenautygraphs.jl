@@ -137,14 +137,14 @@ end
     h = NautyDiGraph(4)
     copy!(h, g)
     @test h.graphset == g.graphset
-    @test h.n_vertices == g.n_vertices
-    @test h.n_edges == g.n_edges
-    @test h.n_words == g.n_words
+    @test h.graphset.n == g.graphset.n
+    @test h.ne == g.ne
+    @test h.graphset.m == g.graphset.m
     @test h.labels == g.labels
     @test h.hashval == g.hashval
 
 
-    g = NautyGraph(5, 1:5)
+    g = NautyGraph(5; vertex_labels=1:5)
     add_edge!(g, 1, 2)
     add_edge!(g, 1, 3)
     add_edge!(g, 1, 4)
