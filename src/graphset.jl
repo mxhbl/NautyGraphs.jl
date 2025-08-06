@@ -32,7 +32,7 @@ function Graphset{W}(A::AbstractMatrix, m=cld(size(A,1), wordsize(W))) where {W}
     gset .= A
     return gset
 end
-Graphset(args...) = Graphset{UInt64}(args...)
+Graphset(args...) = Graphset{UInt}(args...)
 
 Base.size(gset::Graphset) = (gset.n, gset.n)
 Base.IndexStyle(::Type{Graphset}) = IndexCartesian()

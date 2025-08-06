@@ -1,3 +1,10 @@
+"""
+    DenseNautyGraph{D,W}
+
+Memory-efficient graph format compatible with nauty. Can be directed (`D = true`) or undirected (`D = false`).
+This graph format stores the adjacency matrix in bit vector form. `W` is the underlying
+unsigned integer type that holds the individual bits (defaults to `UInt`).
+"""
 mutable struct DenseNautyGraph{D,W<:Unsigned} <: AbstractNautyGraph{Int}
     graphset::Graphset{W}
     labels::Vector{Int}
@@ -16,26 +23,41 @@ function DenseNautyGraph{D}(graphset::Graphset{W}; vertex_labels=nothing) where 
     end
     return DenseNautyGraph{D,W}(graphset, vertex_labels, ne, nothing)
 end
+
+
+"""
+    DenseNautyGraph{D}(n::Integer; [vertex_labels]) where {D}
+
+Construct a `DenseNautyGraph` on `n` vertices and 0 edges. 
+Can be directed (`D = true`) or undirected (`D = false`).
+Vertex labels can optionally be specified.
+"""
 function DenseNautyGraph{D,W}(n::Integer; vertex_labels=nothing) where {D,W<:Unsigned}
     graphset = Graphset{W}(n)
     return DenseNautyGraph{D}(graphset; vertex_labels)
 end
-DenseNautyGraph{D}(n::Integer; vertex_labels=nothing) where {D} = DenseNautyGraph{D,UInt64}(n; vertex_labels)
+DenseNautyGraph{D}(n::Integer; vertex_labels=nothing) where {D} = DenseNautyGraph{D,UInt}(n; vertex_labels)
 
+"""
+    DenseNautyGraph{D}(A::AbstractMatrix; [vertex_labels]) where {D}
+
+Construct a `DenseNautyGraph{D}` from the adjacency matrix `A`.
+If `A[i][j] != 0`, an edge `(i, j)` is inserted. `A` must be a square matrix.
+The graph can be directed (`D = true`) or undirected (`D = false`). If `D = false`, `A` must be symmetric.
+Vertex labels can optionally be specified.
+"""
 function DenseNautyGraph{D,W}(A::AbstractMatrix; vertex_labels=nothing) where {D,W<:Unsigned}
     D || issymmetric(A) || throw(ArgumentError("Adjacency / distance matrices must be symmetric"))
     graphset = Graphset{W}(A)
     return DenseNautyGraph{D}(graphset; vertex_labels)
 end
-DenseNautyGraph{D}(A::AbstractMatrix; vertex_labels=nothing) where {D} = DenseNautyGraph{D,UInt64}(A; vertex_labels)
+DenseNautyGraph{D}(A::AbstractMatrix; vertex_labels=nothing) where {D} = DenseNautyGraph{D,UInt}(A; vertex_labels)
 
 function (::Type{G})(g::AbstractGraph) where {G<:AbstractNautyGraph}
-    if is_directed(g) != is_directed(G)
-        error("Cannot create an undirected NautyGraph from a directed graph (or vice versa). Please make sure the directedness of the graph types is matching.")
-    end
     ng = G(nv(g))
     for e in edges(g)
         add_edge!(ng, e)
+        !is_directed(g) && is_directed(ng) && add_edge!(ng, reverse(e))
     end
     return ng
 end
@@ -44,6 +66,29 @@ function (::Type{G})(g::AbstractNautyGraph) where {G<:AbstractNautyGraph}
     @views h.labels .= g.labels
     return h
 end
+
+"""
+    DenseNautyGraph{D}(edge_list::Vector{<:AbstractEdge}; [vertex_labels]) where {D}
+
+Construct a `DenseNautyGraph` from a vector of edges.
+The number of vertices is the highest that is used in an edge in `edge_list`.
+The graph can be directed (`D = true`) or undirected (`D = false`).
+Vertex labels can optionally be specified.
+"""
+function DenseNautyGraph{D,W}(edge_list::Vector{<:AbstractEdge}; vertex_labels=nothing) where {D,W<:Unsigned}
+    nvg = 0
+    @inbounds for e in edge_list
+        nvg = max(nvg, src(e), dst(e))
+    end
+
+    g = DenseNautyGraph{D,W}(nvg; vertex_labels)
+    for edge in edge_list
+        add_edge!(g, edge)
+    end
+    return g
+end
+DenseNautyGraph{D}(edge_list::Vector{<:AbstractEdge}; vertex_labels=nothing) where {D} = DenseNautyGraph{D,UInt}(edge_list; vertex_labels)
+
 
 Base.copy(g::G) where {G<:DenseNautyGraph} = G(copy(g.graphset), copy(g.labels), g.ne, g.hashval)
 function Base.copy!(dest::G, src::G) where {G<:DenseNautyGraph}

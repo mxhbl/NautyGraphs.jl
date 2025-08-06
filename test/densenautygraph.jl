@@ -2,9 +2,8 @@ rng = Random.Random.MersenneTwister(0) # Use MersenneTwister for Julia 1.6 compa
 symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1); A[i, i] = 0; end; A)
 
 @testset "modify" begin
-    # nverts = [1, 2, 3, 4, 5, 10, 20, 31, 32, 33, 50, 63, 64, 
-    #           65, 100, 122, 123, 124, 125, 126, 200, 500, 1000]
-    nverts = [5]
+    nverts = [1, 2, 3, 4, 5, 10, 20, 31, 32, 33, 50, 63, 64, 
+              65, 100, 122, 123, 124, 125, 126, 200, 500, 1000]
     As = [rand(rng, [0, 1], i, i) for i in nverts]
 
     wtypes = [UInt16, UInt32, UInt64]
@@ -105,7 +104,8 @@ end
     
     g0 = erdos_renyi(70, 100; rng=rng)
     rand_g = NautyGraph(g0)
-    @test_throws ErrorException (rand_g_dir = NautyDiGraph(g0))
+    rand_g_dir = NautyDiGraph(g0)
+    @test rand_g_dir.graphset == rand_g.graphset
 
     @test nv(rand_g) == 70
     @test ne(rand_g) == 100
@@ -123,10 +123,15 @@ end
         @test indegree(rand_g, vertex) == length(inneighbors(rand_g, vertex))
     end
 
+    es = [Edge(1, 2), Edge(2, 3), Edge(2, 4)]
     g = NautyDiGraph(4)
-    add_edge!(g, 1, 2)
-    add_edge!(g, 2, 3)
-    add_edge!(g, 2, 4)
+    for e in es
+        add_edge!(g, e)
+    end
+
+    k = NautyDiGraph(es)
+    
+    @test g == k
 
     g2 = copy(g)
     g3 = copy(g)
