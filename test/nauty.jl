@@ -32,6 +32,16 @@ using Base.Threads
     @test g1_32 ≃ g1
     @test ghash(g1_32) == ghash(g1)
 
+    k1 = copy(g1)
+    rem_edge!(k1, 2, 3)
+    @test !(k1 ≃ h1)
+    @test ghash(k1) != ghash(h1)
+
+    f1 = copy(g1)
+    rem_vertex!(f1, 2)
+    @test !(f1 ≃ h1)
+    @test ghash(f1) != ghash(h1)
+
     g2 = NautyGraph(4; vertex_labels=[0, 0, 1, 1])
     add_edge!(g2, 1, 2)
     add_edge!(g2, 2, 3)
