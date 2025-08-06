@@ -3,16 +3,13 @@ rng = Random.Random.MersenneTwister(0) # Use MersenneTwister for Julia 1.6 compa
 function test_graphsets(A; mfacts)
     n, _ = size(A)
     for mf in mfacts
-        g16 = Graphset{UInt16}(n, mf * cld(n, NautyGraphs.wordsize(UInt16)))
-        g16 .= A
+        g16 = Graphset{UInt16}(A, mf * cld(n, NautyGraphs.wordsize(UInt16)))
         @test g16 == A
         
-        g32 = Graphset{UInt32}(n, mf * cld(n, NautyGraphs.wordsize(UInt32)))
-        g32 .= A
+        g32 = Graphset{UInt32}(A, mf * cld(n, NautyGraphs.wordsize(UInt32)))
         @test g32 == A
 
-        g64 = Graphset{UInt64}(n, mf * cld(n, NautyGraphs.wordsize(UInt64)))
-        g64 .= A
+        g64 = Graphset{UInt64}(A, mf * cld(n, NautyGraphs.wordsize(UInt64)))
         @test g64 == A
     end
     return

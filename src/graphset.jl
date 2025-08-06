@@ -17,13 +17,20 @@ mutable struct Graphset{W<:Unsigned} <: AbstractMatrix{Bool}
     n::Int
     m::Int
 
-    function Graphset{W}(n, m=cld(n, wordsize(W))) where {W}
+    function Graphset{W}(n::Integer, m=cld(n, wordsize(W))) where {W}
         if n > m * wordsize(W)
             throw(ArgumentError("Not enough words to hold n=$n vertices. Increase m or use a larger word type."))
         end
         words = zeros(W, n*m)
         return new{W}(words, n, m)
     end
+end
+function Graphset{W}(A::AbstractMatrix, m=cld(size(A,1), wordsize(W))) where {W}
+    n1, n2 = size(A)
+    n1 == n2 || throw(ArgumentError("Adjacency / distance matrices must be square"))
+    gset = Graphset{W}(n1, m)
+    gset .= A
+    return gset
 end
 Graphset(args...) = Graphset{UInt64}(args...)
 

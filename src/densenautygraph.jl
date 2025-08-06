@@ -23,12 +23,8 @@ end
 DenseNautyGraph{D}(n::Integer; vertex_labels=nothing) where {D} = DenseNautyGraph{D,UInt64}(n; vertex_labels)
 
 function DenseNautyGraph{D,W}(A::AbstractMatrix; vertex_labels=nothing) where {D,W<:Unsigned}
-    n1, n2 = size(A)
-    isequal(n1, n2) || throw(ArgumentError("Adjacency / distance matrices must be square"))
     D || issymmetric(A) || throw(ArgumentError("Adjacency / distance matrices must be symmetric"))
-
-    graphset = Graphset{W}(n1)
-    graphset .= A
+    graphset = Graphset{W}(A)
     return DenseNautyGraph{D}(graphset; vertex_labels)
 end
 DenseNautyGraph{D}(A::AbstractMatrix; vertex_labels=nothing) where {D} = DenseNautyGraph{D,UInt64}(A; vertex_labels)
