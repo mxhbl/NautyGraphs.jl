@@ -154,7 +154,7 @@ end
 Base.:(==)(e1::SimpleEdgeIter{<:Graphs.SimpleGraphs.AbstractSimpleGraph}, e2::SimpleEdgeIter{<:DenseNautyGraph}) = e2 == e1
 
 Graphs.is_directed(::Type{<:DenseNautyGraph{D}}) where {D} = D
-Graphs.edgetype(::AbstractNautyGraph) = Edge{Int}
+Graphs.edgetype(::AbstractNautyGraph) = Graphs.SimpleGraphs.SimpleEdge{Int}
 Base.eltype(::AbstractNautyGraph{T}) where {T} = T
 Base.zero(::G) where {G<:AbstractNautyGraph} = G(0)
 Base.zero(::Type{G}) where {G<:AbstractNautyGraph} = G(0)
@@ -195,12 +195,6 @@ function Graphs.rem_edge!(g::DenseNautyGraph, e::Edge)
 end
 Graphs.rem_edge!(g::AbstractNautyGraph, i::Integer, j::Integer) = Graphs.rem_edge!(g, edgetype(g)(i, j))
 
-# function Graphs.add_vertex!(g::DenseNautyGraph, vertex_label::Integer=Cint(0))
-#     add_vertex!(g.graphset)
-#     push!(g.labels, convert(Cint, vertex_label))
-#     g.hashval = nothing
-#     return true
-# end
 function Graphs.add_vertices!(g::DenseNautyGraph, n::Integer, vertex_labels=0)
     vertex_labels isa Number || n != length(vertex_labels) && throw(ArgumentError("Incompatible length: trying to add `n` vertices, but`vertex_labels` has length $(length(vertex_labels))."))
     ng = nv(g)
