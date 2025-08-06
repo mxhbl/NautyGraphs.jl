@@ -249,7 +249,7 @@ function Graphs.add_vertices!(g::DenseNautyGraph, n::Integer, vertex_labels=0)
     g.hashval = nothing
     return n
 end
-Graphs.add_vertex!(g::DenseNautyGraph, vertex_label::Integer=0) = Graphs.add_vertices!(g, 1, vertex_label)
+Graphs.add_vertex!(g::DenseNautyGraph, vertex_label::Integer=0) = Graphs.add_vertices!(g, 1, vertex_label) > 0
 
 function Graphs.rem_vertices!(g::DenseNautyGraph, inds)
     all(i->has_vertex(g, i), inds) || return false
