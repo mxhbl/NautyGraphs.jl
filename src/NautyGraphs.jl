@@ -7,8 +7,11 @@ import nauty_jll
 const Cbool = Cint
 const HashType = UInt
 
+abstract type AbstractNautyGraph{T} <: AbstractGraph{T} end
+
 include("utils.jl")
-include("densenautygraphs.jl")
+include("graphset.jl")
+include("densenautygraph.jl")
 include("nauty.jl")
 
 const NautyGraph = DenseNautyGraph{false}

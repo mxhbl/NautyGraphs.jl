@@ -1,6 +1,3 @@
-abstract type AbstractNautyGraph{T} <: AbstractGraph{T} end
-# TODO: abstract type AbstractSparseNautyGraph <: AbstractNautyGraph end
-
 mutable struct DenseNautyGraph{D,W<:Unsigned} <: AbstractNautyGraph{Int}
     graphset::Graphset{W}
     labels::Vector{Int}
