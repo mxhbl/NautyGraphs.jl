@@ -19,6 +19,19 @@ using Base.Threads
     @test g1 ≃ h1
     @test ghash(g1) == ghash(h1)
 
+    g1_16 = NautyGraph{UInt16}(g1)
+    @test g1_16 == g1
+    @test g1_16 ≃ g1
+    @test ghash(g1_16) == ghash(g1)
+
+    g1_32 = NautyGraph{UInt32}(g1)
+    @test g1_32 == g1_16
+    @test g1_32 ≃ g1_16
+    @test ghash(g1_32) == ghash(g1_16)
+    @test g1_32 == g1
+    @test g1_32 ≃ g1
+    @test ghash(g1_32) == ghash(g1)
+
     g2 = NautyGraph(4; vertex_labels=[0, 0, 1, 1])
     add_edge!(g2, 1, 2)
     add_edge!(g2, 2, 3)
@@ -32,6 +45,18 @@ using Base.Threads
     @test g2 ≃ h2
     @test ghash(g2) == ghash(h2)
 
+    g2_16 = NautyGraph{UInt16}(g2)
+    @test g2_16 == g2
+    @test g2_16 ≃ g2
+    @test ghash(g2_16) == ghash(g2)
+
+    g2_32 = NautyGraph{UInt32}(g2)
+    @test g2_32 == g2_16
+    @test g2_32 ≃ g2_16
+    @test ghash(g2_32) == ghash(g2_16)
+    @test g2_32 == g2
+    @test g2_32 ≃ g2
+    @test ghash(g2_32) == ghash(g2)
 
     k2 = NautyGraph(4; vertex_labels=[1, 0, 0, 1])
     add_edge!(k2, 3, 4)
@@ -41,6 +66,10 @@ using Base.Threads
     @test !(g2 ≃ k2)
     @test ghash(g2) != ghash(k2)
 
+    @test !(g2_16 ≃ k2)
+    @test !(g2_32 ≃ k2)
+    @test ghash(g2_16) != ghash(k2)
+    @test ghash(g2_32) != ghash(k2)
 
     g3 = NautyGraph(6)
     add_edge!(g3, 1, 2)
@@ -96,13 +125,16 @@ using Base.Threads
     canonperm5 = canonical_permutation(g5)
     @test canon5.labels == g5.labels[canonperm5]
 
-    thread_gs = fill(copy(g4), 10)
-    vals = []
-    @threads for i in eachindex(thread_gs)
-        push!(vals, nauty(thread_gs[i]))
+    # Just test that multithreading doesnt lead to errors
+    thread_gs = [copy(g4) for i in 1:10]
+    vals = Any[nothing for i in 1:10]
+    @threads for i in eachindex(vals, thread_gs)
+        for j in 1:20
+            vals[i] = nauty(thread_gs[i])
+            sleep(0.01)
+        end
     end
-    @test length(vals) == length(thread_gs)
-
+    @test true
 
     gnoloop = NautyGraph(5)
     add_edge!(gnoloop, 1, 2)

@@ -46,6 +46,11 @@ function (::Type{G})(g::AbstractGraph) where {G<:AbstractNautyGraph}
     end
     return ng
 end
+function (::Type{G})(g::AbstractNautyGraph) where {G<:AbstractNautyGraph}
+    h = invoke(G, Tuple{AbstractGraph}, g)
+    @views h.labels .= g.labels
+    return h
+end
 
 Base.copy(g::G) where {G<:DenseNautyGraph} = G(copy(g.graphset), copy(g.labels), g.ne, g.hashval)
 function Base.copy!(dest::G, src::G) where {G<:DenseNautyGraph}
@@ -118,6 +123,7 @@ function Base.:(==)(e1::SimpleEdgeIter{<:DenseNautyGraph}, e2::SimpleEdgeIter{<:
     m = min(nv(g), nv(h))
 
     g.graphset[1:m, 1:m] == h.graphset[1:m, 1:m] || return false
+    nv(g) == nv(h) && return true
 
     g.graphset[m+1:end, :] == 0 || return false
     is_directed(g) || g.graphset[m+1:end, 1:m] == 0 || return false
@@ -126,6 +132,33 @@ function Base.:(==)(e1::SimpleEdgeIter{<:DenseNautyGraph}, e2::SimpleEdgeIter{<:
     is_directed(h) || h.graphset[m+1:end, 1:m] == 0 || return false
     return true
 end
+function Base.:(==)(e1::SimpleEdgeIter{<:DenseNautyGraph}, e2::SimpleEdgeIter{<:Graphs.SimpleGraphs.AbstractSimpleGraph})
+    g = e1.g
+    h = e2.g
+    ne(g) == ne(h) || return false
+    is_directed(g) == is_directed(h) || return false
+
+    m = min(nv(g), nv(h))
+    for i in 1:m
+        outneighbors(g, i) == Graphs.SimpleGraphs.fadj(h, i) || return false
+        if is_directed(h)
+            inneighbors(g, i) == Graphs.SimpleGraphs.badj(h, i) || return false
+        end
+    end
+    nv(g) == nv(h) && return true
+
+    g.graphset[m+1:end, :] == 0 || return false
+    is_directed(g) || g.graphset[m+1:end, 1:m] == 0 || return false
+
+    for i in (m + 1):nv(h)
+        isempty(Graphs.SimpleGraphs.fadj(h, i)) || return false
+        if is_directed(h)
+            isempty(Graphs.SimpleGraphs.badj(h, i)) || return false
+        end
+    end
+    return true
+end
+Base.:(==)(e1::SimpleEdgeIter{<:Graphs.SimpleGraphs.AbstractSimpleGraph}, e2::SimpleEdgeIter{<:DenseNautyGraph}) = e2 == e1
 
 Graphs.is_directed(::Type{<:DenseNautyGraph{D}}) where {D} = D
 Graphs.edgetype(::AbstractNautyGraph) = Edge{Int}
