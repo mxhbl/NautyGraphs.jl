@@ -26,6 +26,7 @@ export
     AbstractNautyGraph,
     NautyGraph,
     NautyDiGraph,
+    DenseNautyGraph,
     AutomorphismGroup,
     labels,
     nauty,
