@@ -2,7 +2,9 @@
     Graphset{W}
 
 A graphset is a special bit matrix used to represent the adjacency matrix 
-of a nauty graph in dense format.
+of a nauty graph in dense format. For a graph on `n` vertices, the graphset
+contains `n*m` "words", i.e. unsigned integers that contain the bits of 
+the adjacency matrix, where `m` is the number of words per vertex.
 
 The organization of words is as follows:
 
