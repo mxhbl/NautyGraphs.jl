@@ -1,6 +1,6 @@
 module NautyGraphs
 
-using Graphs, SparseArrays, LinearAlgebra, SHA
+using Graphs, LinearAlgebra, SHA
 using Graphs.SimpleGraphs: SimpleEdgeIter
 import nauty_jll
 
