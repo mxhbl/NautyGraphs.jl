@@ -1,5 +1,3 @@
-using Base.Threads
-
 @testset "nauty" begin
     verylarge_g = NautyGraph(50)
 
