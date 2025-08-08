@@ -265,27 +265,12 @@ function Graphs.rem_vertices!(g::DenseNautyGraph, inds)
 end
 Graphs.rem_vertex!(g::DenseNautyGraph, i::Integer) = rem_vertices!(g, (i,))
 
-function Graphs.blockdiag(g::G, h::G) where {G<:DenseNautyGraph}
+function Graphs.blockdiag(g::DenseNautyGraph{D1,W}, h::DenseNautyGraph{D2}) where {D1,D2,W}
     ng, nh = nv(g), nv(h)
 
     gset = Graphset{wordtype(g.graphset)}(ng+nh)
     gset[1:ng, 1:ng] .= g.graphset
     gset[ng+1:end, ng+1:end] .= h.graphset
-    return G(gset, vcat(g.labels, h.labels))
-end
-
-"""
-    blockdiag!(g::G, h::G) where {G<:DenseNautyGraph}
-
-Compute `blockdiag(g, h)` and store it in `g`, whose size is increased to accomodate it.
-"""
-function blockdiag!(g::G, h::G) where {G<:DenseNautyGraph}
-    ng, nh = nv(g), nv(h)
-    add_vertices!(nh, h.labels)
-
-    for e in edges(h)
-        add_edge!(g, e.src+ng, e.dst+ng)
-    end
-    g.hashval = nothing
-    return g
+    D = D1 || D2
+    return DenseNautyGraph{D,W}(gset; vertex_labels=vcat(g.labels, h.labels))
 end

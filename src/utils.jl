@@ -18,5 +18,15 @@ end
 function hash_sha(x)
     io = IOBuffer()
     write(io, x)
-    return _concatbytes(sha256(take!(io))[1:8])
+    return concatbytes(@view sha256(take!(io))[1:8])
 end
+
+function concatbytes(W::Type{<:Unsigned}, bytes)
+    w = zero(W)
+    for b in bytes
+        w |= b
+        w <<= 8
+    end
+    return w
+end
+concatbytes(bytes) = concatbytes(UInt64, bytes)

@@ -165,4 +165,9 @@
 
     @test_nowarn nauty(gdiloop)
     @test !is_isomorphic(gdinoloop, gdiloop)
+
+    # Test that ghash doesnt error for large graphs
+    glarge = NautyGraph(200)
+    ghash(glarge)
+    @test true
 end

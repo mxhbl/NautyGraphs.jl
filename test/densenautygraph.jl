@@ -166,16 +166,23 @@ end
     @test h.hashval == g.hashval
 
 
-    g = NautyGraph(5; vertex_labels=1:5)
-    add_edge!(g, 1, 2)
-    add_edge!(g, 1, 3)
-    add_edge!(g, 1, 4)
-    add_edge!(g, 1, 5)
-    add_edge!(g, 2, 5)
+    glab = NautyGraph(5; vertex_labels=1:5)
+    add_edge!(glab, 1, 2)
+    add_edge!(glab, 1, 3)
+    add_edge!(glab, 1, 4)
+    add_edge!(glab, 1, 5)
+    add_edge!(glab, 2, 5)
 
-    gind1 = g[[1, 5, 2]]
+    gind1 = glab[[1, 5, 2]]
     @test gind1.labels == [1, 5, 2]
 
-    gind2 = g[[Edge(1, 2), Edge(1, 4)]]
+    gind2 = glab[[Edge(1, 2), Edge(1, 4)]]
     @test gind2.labels == [1, 2, 4]
+
+    gb = NautyGraph(g0)
+    vg = DiGraph(g)
+
+    bb_ng = blockdiag(gb, g)
+    bb_g = NautyDiGraph(blockdiag(DiGraph(g0), vg))
+    @test bb_ng == bb_g
 end
