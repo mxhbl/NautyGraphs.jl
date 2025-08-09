@@ -3,7 +3,7 @@
 
 Memory-efficient graph format compatible with nauty. Can be directed (`D = true`) or undirected (`D = false`).
 This graph format stores the adjacency matrix in bit vector form. `W` is the underlying
-unsigned integer type that holds the individual bits (defaults to `UInt`).
+unsigned integer type that holds the individual bits of the graph's adjacency matrix (defaults to `UInt`).
 """
 mutable struct DenseNautyGraph{D,W<:Unsigned} <: AbstractNautyGraph{Int}
     graphset::Graphset{W}
