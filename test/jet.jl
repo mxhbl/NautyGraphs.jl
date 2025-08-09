@@ -1,7 +1,7 @@
 using JET
 
 @testset "JET" begin 
-   test_package(NautyGraphs)
+   test_package(NautyGraphs; target_modules=(NautyGraphs,))
 
    @test_opt NautyGraph(10)
    @test_opt NautyDiGraph(10)
