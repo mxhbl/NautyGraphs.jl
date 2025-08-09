@@ -1,7 +1,7 @@
 rng = Random.Random.MersenneTwister(0) # Use MersenneTwister for Julia 1.6 compat
 symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1); A[i, i] = 0; end; A)
 
-@testset "modify" begin
+@testset "densenautygraph" begin
     nverts = [1, 2, 3, 4, 5, 10, 20, 31, 32, 33, 50, 63, 64, 
               65, 100, 122, 123, 124, 125, 126, 200, 500, 1000]
     As = [rand(rng, [0, 1], i, i) for i in nverts]
@@ -95,9 +95,7 @@ symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1
     add_edge!(g_diloop, 1, 2)
     add_edge!(ng_diloop, 1, 2)
     @test ne(ng_diloop) == ne(g_diloop)
-end
 
-@testset "methods" begin
     empty_g = NautyGraph(0)
     @test nv(empty_g) == 0
     @test ne(empty_g) == 0
