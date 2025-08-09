@@ -11,5 +11,5 @@ using Base.Threads
     include("utils.jl")
     VERSION >= v"1.9-" && include("interface.jl")
     include("aqua.jl")
-    include("jet.jl")
+    VERSION >= v"1.10" && include("jet.jl")
 end
