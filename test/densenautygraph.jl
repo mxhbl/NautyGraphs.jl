@@ -2,34 +2,50 @@ rng = Random.Random.MersenneTwister(0) # Use MersenneTwister for Julia 1.6 compa
 symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1); A[i, i] = 0; end; A)
 
 @testset "modify" begin
-    nverts = [5, 10, 20, 31, 32, 33, 50, 63, 64, 65, 100, 200, 500, 1000]
-    rvs = [sort(unique(rand(rng, 1:i, 4))) for i in nverts]
-    As = [symmetrize_adjmx(rand(rng, [0, 1], i, i)) for i in nverts]
+    nverts = [1, 2, 3, 4, 5, 10, 20, 31, 32, 33, 50, 63, 64, 
+              65, 100, 122, 123, 124, 125, 126, 200, 500, 1000]
+    As = [rand(rng, [0, 1], i, i) for i in nverts]
 
-    gs = [Graph(A) for A in As]
-    ngs = [NautyGraph(A) for A in As]
+    wtypes = [UInt16, UInt32, UInt64]
 
-    for (g, ng, rv) in zip(gs, ngs, rvs)
+    gs = []
+    ngs = []
+    for A in As, wt in wtypes
+        Asym = symmetrize_adjmx(A)
+        push!(gs, Graph(Asym))
+        push!(gs, DiGraph(A))
+        push!(ngs, NautyGraph{wt}(Asym))
+        push!(ngs, NautyDiGraph{wt}(A))
+    end
+
+    for (g, ng) in zip(gs, ngs)
         g, ng = copy(g), copy(ng)
 
         @test adjacency_matrix(g) == adjacency_matrix(ng)
+        @test edges(ng) == edges(g)
+        @test collect(edges(g)) == collect(edges(ng))
+
+        rv = sort(unique(rand(rng, 1:nv(ng), 4)))
 
         rem_vertices!(g, rv, keep_order=true)
         rem_vertices!(ng, rv)
         @test adjacency_matrix(g) == adjacency_matrix(ng)
     end
 
-    for (g, ng, rv) in zip(gs, ngs, rvs)
+    for (g, ng) in zip(gs, ngs)
         g, ng = copy(g), copy(ng)
 
-        edge = collect(edges(g))[end]
+        es = edges(g)
+        if !isempty(es)
+            edge = last(collect(es))
 
-        rem_edge!(g, edge)
-        rem_edge!(ng, edge)
-        @test adjacency_matrix(g) == adjacency_matrix(ng)
+            rem_edge!(g, edge)
+            rem_edge!(ng, edge)
+            @test adjacency_matrix(g) == adjacency_matrix(ng)
+        end
     end
 
-    for (g, ng, rv) in zip(gs, ngs, rvs)
+    for (g, ng) in zip(gs, ngs)
         g, ng = copy(g), copy(ng)
 
         add_vertex!(g)
@@ -39,7 +55,7 @@ symmetrize_adjmx(A) = (A = convert(typeof(A), (A + A') .> 0); for i in axes(A, 1
         @test adjacency_matrix(g) == adjacency_matrix(ng)
     end
 
-    for (g, ng, rv) in zip(gs, ngs, rvs)
+    for (g, ng) in zip(gs, ngs)
         g, ng = copy(g), copy(ng)
 
         add_vertices!(g, 500)
@@ -88,7 +104,8 @@ end
     
     g0 = erdos_renyi(70, 100; rng=rng)
     rand_g = NautyGraph(g0)
-    @test_throws ErrorException (rand_g_dir = NautyDiGraph(g0))
+    rand_g_dir = NautyDiGraph(g0)
+    @test rand_g_dir.graphset == rand_g.graphset
 
     @test nv(rand_g) == 70
     @test ne(rand_g) == 100
@@ -106,10 +123,15 @@ end
         @test indegree(rand_g, vertex) == length(inneighbors(rand_g, vertex))
     end
 
+    es = [Edge(1, 2), Edge(2, 3), Edge(2, 4)]
     g = NautyDiGraph(4)
-    add_edge!(g, 1, 2)
-    add_edge!(g, 2, 3)
-    add_edge!(g, 2, 4)
+    for e in es
+        add_edge!(g, e)
+    end
+
+    k = NautyDiGraph(es)
+    
+    @test g == k
 
     g2 = copy(g)
     g3 = copy(g)
@@ -137,23 +159,30 @@ end
     h = NautyDiGraph(4)
     copy!(h, g)
     @test h.graphset == g.graphset
-    @test h.n_vertices == g.n_vertices
-    @test h.n_edges == g.n_edges
-    @test h.n_words == g.n_words
+    @test h.graphset.n == g.graphset.n
+    @test h.ne == g.ne
+    @test h.graphset.m == g.graphset.m
     @test h.labels == g.labels
     @test h.hashval == g.hashval
 
 
-    g = NautyGraph(5, 1:5)
-    add_edge!(g, 1, 2)
-    add_edge!(g, 1, 3)
-    add_edge!(g, 1, 4)
-    add_edge!(g, 1, 5)
-    add_edge!(g, 2, 5)
+    glab = NautyGraph(5; vertex_labels=1:5)
+    add_edge!(glab, 1, 2)
+    add_edge!(glab, 1, 3)
+    add_edge!(glab, 1, 4)
+    add_edge!(glab, 1, 5)
+    add_edge!(glab, 2, 5)
 
-    gind1 = g[[1, 5, 2]]
+    gind1 = glab[[1, 5, 2]]
     @test gind1.labels == [1, 5, 2]
 
-    gind2 = g[[Edge(1, 2), Edge(1, 4)]]
+    gind2 = glab[[Edge(1, 2), Edge(1, 4)]]
     @test gind2.labels == [1, 2, 4]
+
+    gb = NautyGraph(g0)
+    vg = DiGraph(g)
+
+    bb_ng = blockdiag(gb, g)
+    bb_g = NautyDiGraph(blockdiag(DiGraph(g0), vg))
+    @test bb_ng == bb_g
 end
