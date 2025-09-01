@@ -103,31 +103,14 @@ end
         canong.words::Ref{W})::Cvoid end
 end
 
-function _sethash!(g::DenseNautyGraph, canong::Graphset, canonperm)
-    # Base.hash skips elements in arrays of length >= 8192
-    # Use SHA in these cases
-    canong_hash = length(canong) >= 8192 ? hash_sha(canong) : hash(canong)
-    labels_hash = @views length(g.labels) >= 8192 ? hash_sha(g.labels[canonperm]) : hash(g.labels[canonperm])
-
-    hashval = hash(labels_hash, canong_hash)
-    g.hashval = hashval
-    return
-end
-function _canonize!(g::DenseNautyGraph, canong::Graphset, canonperm)
-    copy!(g.graphset, canong)
-    permute!(g.labels, canonperm)
-    return
-end
-
-
 """
-    nauty(g::AbstractNautyGraph, [options::NautyOptions]; [canonize=false])
+    nauty(g::AbstractNautyGraph, [options::NautyOptions; canonize=false, compute_hash=true, hashalg=XXHash64Alg()])
 
 Compute a graph `g`'s canonical form and automorphism group.
 """
 function nauty(::AbstractNautyGraph, ::NautyOptions; kwargs...) end
 
-function nauty(g::DenseNautyGraph, options::NautyOptions=default_options(g); canonize=false, compute_hash=true)
+function nauty(g::DenseNautyGraph, options::NautyOptions=default_options(g); canonize=false, compute_hash=true, hashalg=XXHash64Alg()::AbstractHashAlg)
     if is_directed(g) && !isone(options.digraph)
         error("Nauty options need to match the directedness of the input graph. Make sure to instantiate options with `digraph=true` if the input graph is directed.")
     end
@@ -140,8 +123,13 @@ function nauty(g::DenseNautyGraph, options::NautyOptions=default_options(g); can
     # generators = Vector{Cint}[] # TODO: extract generators from nauty call
     autg = AutomorphismGroup(statistics.grpsize1 * 10^statistics.grpsize2, orbits)
 
-    compute_hash && _sethash!(g, canong, canonperm)
-    canonize && _canonize!(g, canong, canonperm)
+    if canonize
+        copy!(g.graphset, canong)
+        permute!(g.labels, canonperm)
+        compute_hash && _sethash!(g; alg=hashalg)
+    else
+        compute_hash && _sethash!(g, canong, canonperm; alg=hashalg)
+    end
     return canonperm, autg
 end
 
@@ -152,10 +140,11 @@ Reorder `g`'s vertices to be in canonical order. Returns the permutation `p` use
 """
 function canonize!(::AbstractNautyGraph) end
 
-function canonize!(g::DenseNautyGraph)
+function canonize!(g::DenseNautyGraph; compute_hash=true, hashalg=XXHash64Alg()::AbstractHashAlg)
     canong, canonperm, _ = _densenauty(g)
-    _sethash!(g, canong, canonperm)
-    _canonize!(g, canong, canonperm)
+    copy!(g.graphset, canong)
+    permute!(g.labels, canonperm)
+    compute_hash && _sethash!(g; alg=hashalg)
     return canonperm
 end
 
@@ -185,21 +174,45 @@ function is_isomorphic(g::DenseNautyGraph, h::DenseNautyGraph)
 end
 ≃(g::AbstractNautyGraph, h::AbstractNautyGraph) = is_isomorphic(g, h)
 
-
 """
-    ghash(g::AbstractNautyGraph)
+    ghash(g::AbstractNautyGraph; [alg=XXHash64Alg()])
 
-Hash the canonical version of `g`, so that (up to hash collisions) `ghash(g1) == ghash(g2)` implies `is_isomorphic(g1, g2) == true`.
-Hashes are computed using `Base.hash` for small graphs (nv < 8192), or using the first 64 bits of `sha256` for larger graphs.
+Compute a hash of the canonical version of `g`, meaning that `is_isomorphic(g1, g2) == true` implies `ghash(g1) == ghash(g2)`. The converse usually holds as well, 
+but in rare cases, hash collisions may cause non-isomorphic graphs to have the same hash. The likelihood of a hash collision occuring depends on the 
+chosen hashing algorithm, which can be specified via the `alg` keyword. Valid algorithm choices are:
+
+- `XXHash64Alg()`: The 64bit version of the xxHash algorithm (`XXH3_64bits`). Fast and resistant against collisions, but not cryptographically secure. 
+See (xxHash)[https://xxhash.com] for more details on collision resistance. This is the default option.
+- `XXHash128Alg()`: The 128bit version of the xxHash algorithm (`XXH3_128bits`). Slightly slower than the 64bit xxHash, resistant against collisions, but not cryptographically secure.
+See the (xxHash)[https://xxhash.com] for more details on collision resistance.
+- `SHA64Alg()`: The first 64bits of the SHA256 hash. Slow but cryptographically secure. Consider using `SHA128Alg()` instead, since the 128bit version runs at the same speed.
+- `SHA128Alg()`: The first 128bits of the SHA256 hash. Slow but cryptographically secure.
+- `Base64Alg()`: The built-in Julia hash function `Base.hash`. Fast, but not secure against collisions, so __use with caution__! 
+It is strongly recommended to use `XXHash64Alg()` instead. Cannot hash graphs with more than `√8192 ≈ 90` vertices.
+
+!!! warning "Warning"
+__Using different hashing algorithms will result in different hash values__. Before you compare different graph hashes, you have to 
+ensure that the hashes were computed with the same algorithm, or you will get meaningless results.
 """
-function ghash(::AbstractNautyGraph) end
+function ghash(::AbstractNautyGraph; alg=XXHash64Alg()::AbstractHashAlg) end
 
-function ghash(g::DenseNautyGraph)
-    if !isnothing(g.hashval)
-        return g.hashval
-    end
+
+function ghash(g::DenseNautyGraph; alg=XXHash64Alg()::AbstractHashAlg)
+    h = gethash(g.hashcache, alg)
+    isnothing(h) || return h
 
     canong, canonperm, _ = _densenauty(g)
-    _sethash!(g, canong, canonperm)
-    return g.hashval
+    h = _sethash!(g, canong, canonperm; alg)
+    return h
+end
+
+function _sethash!(g::DenseNautyGraph, canong::Graphset, canonperm; alg=XXHash64Alg()::AbstractHashAlg)
+    h = _ghash(canong, @view g.labels[canonperm]; alg)
+    sethash!(g.hashcache, h, alg)
+    return h 
+end
+function _sethash!(canong::DenseNautyGraph; alg=XXHash64Alg()::AbstractHashAlg)
+    h = _ghash(canong.graphset, canong.labels; alg)
+    sethash!(canong.hashcache, h, alg)
+    return h 
 end
